@@ -35,7 +35,7 @@ def _(Path, pd, run_orion_dcf):
         from tempfile import gettempdir
         from urllib.request import urlretrieve
 
-    cloud_excel_path = Path(gettempdir()) / "orion_dcf.xlsx"
+        cloud_excel_path = Path(gettempdir()) / "orion_dcf.xlsx"
 
         urlretrieve(
             "https://raw.githubusercontent.com/"
