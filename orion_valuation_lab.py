@@ -29,6 +29,23 @@ def _(Path, pd, run_orion_dcf):
         / "orion_dcf.xlsx"
     )
 
+    # Molab 등 클라우드 환경에서 Excel 파일이 없으면
+    # GitHub 원본을 임시 폴더에 내려받습니다.
+    if not excel_path.exists():
+        from tempfile import gettempdir
+        from urllib.request import urlretrieve
+
+    cloud_excel_path = Path(gettempdir()) / "orion_dcf.xlsx"
+
+        urlretrieve(
+            "https://raw.githubusercontent.com/"
+            "hahnjune0118/Orion_DCF_Valuation/"
+            "main/data/raw/orion_dcf.xlsx",
+            cloud_excel_path,
+        )
+
+        excel_path = cloud_excel_path
+
     model = run_orion_dcf(excel_path)
 
     forecast_df = pd.DataFrame(model["전망"])
