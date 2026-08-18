@@ -1,3 +1,11 @@
+## Interactive DCF Valuation Lab
+
+[![Open in molab](https://marimo.io/molab-shield.svg)](https://molab.marimo.io/github/hahnjune0118/Orion_DCF_Valuation/blob/main/orion_valuation_lab.py)
+
+- [분석 결과 미리보기](https://molab.marimo.io/github/hahnjune0118/Orion_DCF_Valuation/blob/main/orion_valuation_lab.py)
+- [대화형 모델 실행](https://molab.marimo.io/github/hahnjune0118/Orion_DCF_Valuation/blob/main/orion_valuation_lab.py/server)
+
+
 # Orion Valuation Lab
 
 오리온의 2025년 K-IFRS 연결재무제표를 기반으로 구축한
