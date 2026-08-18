@@ -309,110 +309,51 @@ def _(dashboard_css, dashboard_header, kpi_strip, mo):
 
 
 @app.cell
-def _(forecast_df, model, run_orion_dcf):
-    import inspect
+def _():
+    def apply_chart_style(fig, height=360):
+        fig.update_layout(
+            height=height,
+            margin=dict(l=45, r=35, t=75, b=45),
+            paper_bgcolor="#FFFFFF",
+            plot_bgcolor="#FFFFFF",
+            font=dict(
+                family="Arial, Pretendard, sans-serif",
+                color="#243B53",
+                size=12,
+            ),
+            title=dict(
+                font=dict(size=16, color="#102A43"),
+                x=0.02,
+                xanchor="left",
+            ),
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1,
+            ),
+            hoverlabel=dict(
+                bgcolor="#FFFFFF",
+                bordercolor="#D9E2EC",
+                font_color="#243B53",
+            ),
+        )
 
-    model_structure = {
-        "모델 최상위 키": list(model.keys()),
-        "전망 열": forecast_df.columns.tolist(),
-        "첫 번째 전망 행": forecast_df.iloc[0].to_dict(),
-        "DCF 결과": model["DCF"],
-        "지분가치 결과": model["지분가치"],
-        "run_orion_dcf 함수": str(
-            inspect.signature(run_orion_dcf)
-        ),
-    }
+        fig.update_xaxes(
+            showgrid=False,
+            linecolor="#D9E2EC",
+            tickfont=dict(color="#64748B"),
+        )
+        fig.update_yaxes(
+            gridcolor="#E9EEF3",
+            zeroline=False,
+            linecolor="#D9E2EC",
+            tickfont=dict(color="#64748B"),
+        )
+        return fig
 
-    model_structure
-    return
-
-
-app._unparsable_cell(
-    r"""
-    {
-    "모델 최상위 키":[
-    "지역별 매출액"
-    "전망"
-    "WACC"
-    "DCF"
-    "지분가치"
-    ]
-    "전망 열":[
-    "연도"
-    "한국 매출액"
-    "중국 매출액"
-    "기타 국가 매출액"
-    "매출액"
-    "EBIT"
-    "영업이익률"
-    "NWC"
-    "NWC 증감"
-    "D&A"
-    "Capex"
-    "NOPAT"
-    "FCFF"
-    ]
-    "첫 번째 전망 행":{
-    "연도":2026.0
-    "한국 매출액":1140548.84528
-    "중국 매출액":1375587.86299
-    "기타 국가 매출액":1020543.9145200001
-    "매출액":3536680.6227900004
-    "EBIT":604772.38649709
-    "영업이익률":0.17099999999999999
-    "NWC":108135.22123379825
-    "NWC 증감":5312.854131798318
-    "D&A":176834.03113950003
-    "Capex":335613.94740276004
-    "NOPAT":450555.42794033204
-    "FCFF":286462.6575452737
-    }
-    "DCF 결과":{
-    "할인계수":[
-    0.9134286572256203
-    0.8343519118409998
-    0.7621209464865535
-    0.6961431127927314
-    0.6358770687551282
-    ]
-    "FCFF 현재가치":[
-    261663.20062686206
-    281044.8373652704
-    420032.62057294714
-    385957.26493082906
-    370615.865499096
-    ]
-    "추정기간 FCFF 현재가치":1719313.7889950047
-    "계속기업가치":7950369.8674240615
-    "계속기업가치 현재가치":5055457.886816709
-    "기업가치":6774771.675811714
-    "계속기업가치 비중":0.7462181943144223
-    }
-    "지분가치 결과":{
-    "현금및현금성자산":311390.944459
-    "필요 영업현금":66648.85072746
-    "초과현금":244742.09373154002
-    "단기금융상품":986075.622834
-    "유동 당기손익-공정가치측정 금융자산":5000
-    "리가켐바이오 시장가치":1626402.257
-    "기타 관계기업 및 공동기업투자":66813.16708799999
-    "비유동 기타포괄손익-공정가치측정 금융자산":5020.596359
-    "투자부동산 공정가치":103263
-    "비영업자산 합계":3037316.7370125405
-    "금융기관차입금":0
-    "리스부채":35516.034975999995
-    "비지배지분":103543.703388
-    "차감항목 합계":139059.738364
-    "순비영업 조정액":2898256.9986485406
-    "지분가치":9673028.674460255
-    "유통주식수(백만주)":39.528788
-    "주당 내재가치":244708.4558843609
-    "내재 상승여력":1.345523395805242
-    }
-    "run_orion_dcf 함수":"(excel_path, revenue_growth_adjustment=0.0, ebit_margin_adjustment=0.0, wacc_adjustment=0.0, termina…"
-    """,
-    name="_"
-)
+    return (apply_chart_style,)
 
 
 @app.cell
@@ -914,11 +855,6 @@ def _(executive_top, mo, visual_grid, visual_section_header):
     )
 
     valuation_overview_page
-    return
-
-
-@app.cell
-def _():
     return
 
 
