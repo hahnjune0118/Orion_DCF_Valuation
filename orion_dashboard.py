@@ -11,12 +11,17 @@ def _():
     import plotly.express as px
     import plotly.graph_objects as go
 
+    from html import escape
     from pathlib import Path
     from dashboard_components import (
         build_fcff_waterfall_figure,
         build_fcff_waterfall_insight,
+        build_formula_explorer_insight,
+        build_valuation_formula_catalog,
         calculate_fcff_waterfall_kpis,
         prepare_fcff_waterfall_data,
+        prepare_formula_explorer_data,
+        reconcile_formula_result,
         select_forecast_row,
     )
     from orion_dcf import run_orion_dcf
@@ -25,11 +30,16 @@ def _():
         Path,
         build_fcff_waterfall_figure,
         build_fcff_waterfall_insight,
+        build_formula_explorer_insight,
+        build_valuation_formula_catalog,
         calculate_fcff_waterfall_kpis,
+        escape,
         go,
         mo,
         pd,
         prepare_fcff_waterfall_data,
+        prepare_formula_explorer_data,
+        reconcile_formula_result,
         run_orion_dcf,
         select_forecast_row,
     )
@@ -263,6 +273,186 @@ def _(mo):
                 font-size: 11px;
                 line-height: 1.55;
                 margin-top: 10px;
+            }}
+
+            .formula-lineage {{
+                display: flex;
+                align-items: center;
+                gap: 7px;
+                flex-wrap: wrap;
+                margin: 8px 0 14px 0;
+            }}
+
+            .formula-node {{
+                border-radius: 999px;
+                padding: 6px 10px;
+                font-size: 11px;
+                font-weight: 700;
+                white-space: nowrap;
+            }}
+
+            .formula-node-current {{
+                background: {COLORS["blue"]};
+                color: #FFFFFF;
+                box-shadow: 0 2px 6px rgba(31, 90, 148, 0.18);
+            }}
+
+            .formula-node-complete {{
+                background: #DDF3F0;
+                color: #176B63;
+                border: 1px solid #ABDCD5;
+            }}
+
+            .formula-node-future {{
+                background: #EEF2F6;
+                color: {COLORS["muted"]};
+                border: 1px solid {COLORS["line"]};
+            }}
+
+            .formula-node-aux {{
+                background: {COLORS["open_gold"]};
+                color: #8A5A10;
+                border: 1px dashed #D7A344;
+            }}
+
+            .formula-arrow {{
+                color: #9AAABD;
+                font-size: 13px;
+                font-weight: 700;
+            }}
+
+            .formula-panel {{
+                background: {COLORS["surface"]};
+                border: 1px solid {COLORS["line"]};
+                border-radius: 10px;
+                padding: 18px;
+                min-height: 420px;
+                box-shadow: 0 2px 8px rgba(16, 42, 67, 0.05);
+            }}
+
+            .formula-label {{
+                color: {COLORS["muted"]};
+                font-size: 10px;
+                font-weight: 750;
+                letter-spacing: 0.05em;
+                margin-bottom: 5px;
+                text-transform: uppercase;
+            }}
+
+            .formula-copy {{
+                color: {COLORS["ink"]};
+                font-size: 12px;
+                line-height: 1.6;
+                margin-bottom: 14px;
+            }}
+
+            .formula-equation {{
+                background: #F7FAFC;
+                border: 1px solid {COLORS["line"]};
+                border-radius: 9px;
+                padding: 14px 16px;
+                margin: 10px 0 12px 0;
+            }}
+
+            .formula-substitution {{
+                color: {COLORS["navy"]};
+                font-size: 17px;
+                font-weight: 760;
+                line-height: 1.5;
+                margin-top: 4px;
+            }}
+
+            .formula-kpi-grid {{
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 8px;
+                margin: 12px 0;
+            }}
+
+            .formula-kpi {{
+                background: {COLORS["background"]};
+                border-radius: 8px;
+                padding: 10px 11px;
+                border-top: 3px solid {COLORS["blue"]};
+            }}
+
+            .formula-kpi-label {{
+                color: {COLORS["muted"]};
+                font-size: 9px;
+                font-weight: 700;
+            }}
+
+            .formula-kpi-value {{
+                color: {COLORS["navy"]};
+                font-size: 14px;
+                font-weight: 780;
+                margin-top: 4px;
+                word-break: break-word;
+            }}
+
+            .formula-badge {{
+                display: inline-block;
+                border-radius: 999px;
+                padding: 5px 10px;
+                font-size: 11px;
+                font-weight: 800;
+                letter-spacing: 0.04em;
+            }}
+
+            .formula-badge-pass {{
+                background: #DDF3F0;
+                color: #176B63;
+                border: 1px solid #ABDCD5;
+            }}
+
+            .formula-badge-fail {{
+                background: #FBE9E4;
+                color: #B75036;
+                border: 1px solid #F0B7A8;
+            }}
+
+            .formula-insight {{
+                border-left: 3px solid {COLORS["gold"]};
+                background: {COLORS["open_gold"]};
+                color: {COLORS["ink"]};
+                border-radius: 0 8px 8px 0;
+                padding: 11px 12px;
+                font-size: 11px;
+                line-height: 1.55;
+                margin-top: 12px;
+            }}
+
+            .formula-table {{
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 11px;
+                margin-top: 10px;
+            }}
+
+            .formula-table th {{
+                text-align: right;
+                color: {COLORS["muted"]};
+                font-weight: 700;
+                border-bottom: 1px solid {COLORS["line"]};
+                padding: 6px 7px;
+            }}
+
+            .formula-table th:first-child,
+            .formula-table td:first-child {{
+                text-align: left;
+            }}
+
+            .formula-table td {{
+                text-align: right;
+                color: {COLORS["ink"]};
+                border-bottom: 1px solid #E9EEF3;
+                padding: 6px 7px;
+            }}
+
+            @media (max-width: 900px) {{
+                .formula-kpi-grid {{
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }}
             }}
         </style>
         """
@@ -1045,12 +1235,529 @@ def _(
 
 
 @app.cell
-def _(executive_top, mo, visual_grid, visual_section_header):
+def _(build_valuation_formula_catalog, mo):
+    _formula_stages = list(build_valuation_formula_catalog())
+    formula_stage_selector = mo.ui.dropdown(
+        options={stage: stage for stage in _formula_stages},
+        value="FCFF",
+        label="가치평가 단계",
+        allow_select_none=False,
+        full_width=True,
+    )
+    formula_year_selector = mo.ui.dropdown(
+        options={f"{year}E": year for year in range(2026, 2031)},
+        value="2026E",
+        label="분석 연도",
+        allow_select_none=False,
+        full_width=True,
+    )
+    return formula_stage_selector, formula_year_selector
+
+
+@app.cell
+def _(
+    build_formula_explorer_insight,
+    formula_stage_selector,
+    formula_year_selector,
+    model,
+    prepare_formula_explorer_data,
+    reconcile_formula_result,
+):
+    _formula_stage = formula_stage_selector.value
+    formula_year_is_applicable = _formula_stage in {
+        "매출액",
+        "EBIT",
+        "FCFF",
+    }
+    _formula_year = (
+        formula_year_selector.value
+        if formula_year_is_applicable
+        else None
+    )
+    _prepared_formula_result = prepare_formula_explorer_data(
+        model,
+        _formula_stage,
+        _formula_year,
+    )
+    formula_result = reconcile_formula_result(
+        _prepared_formula_result
+    )
+    formula_insight = build_formula_explorer_insight(
+        formula_result
+    )
+    return formula_insight, formula_result, formula_year_is_applicable
+
+
+@app.cell
+def _(escape):
+    def format_formula_metric(value, stage, metric_name=""):
+        numeric_value = float(value)
+        if stage == "WACC" or "비중" in metric_name or "상승여력" in metric_name:
+            return f"{numeric_value:.2%}"
+        if stage in {"DCF", "지분가치"}:
+            return f"{numeric_value / 1_000_000:,.3f}조원"
+        if stage == "주당 내재가치":
+            return f"{numeric_value:,.0f}원"
+        return f"{numeric_value / 1_000:,.1f}십억원"
+
+    def formula_input_cards(formula_result):
+        _stage = str(formula_result["단계"])
+        _inputs = dict(formula_result["표시 입력값"])
+        _details = dict(formula_result.get("계산 세부", {}))
+        _cards = []
+
+        if _stage == "WACC":
+            _ordered_items = [
+                ("무위험수익률", _inputs["무위험수익률"], "rate"),
+                (
+                    "주식시장위험프리미엄",
+                    _inputs["주식시장위험프리미엄"],
+                    "rate",
+                ),
+                ("베타", _inputs["베타"], "multiple"),
+                ("국가위험프리미엄", _inputs["국가위험프리미엄"], "rate"),
+                ("자기자본비용", _details["자기자본비용"], "rate"),
+                (
+                    "세전 타인자본비용",
+                    _inputs["세전 타인자본비용"],
+                    "rate",
+                ),
+                (
+                    "세후 타인자본비용",
+                    _details["세후 타인자본비용"],
+                    "rate",
+                ),
+                ("자기자본 비중", _inputs["자기자본 비중"], "rate"),
+                ("타인자본 비중", _inputs["타인자본 비중"], "rate"),
+            ]
+        elif _stage == "DCF":
+            _ordered_items = [
+                ("WACC", _inputs["WACC"], "rate"),
+                ("영구성장률", _inputs["영구성장률"], "rate"),
+                (
+                    "추정기간 FCFF 현재가치",
+                    _details["추정기간 FCFF 현재가치"] / 1_000_000,
+                    "trillion",
+                ),
+                (
+                    "계속기업가치",
+                    _details["계속기업가치"] / 1_000_000,
+                    "trillion",
+                ),
+                (
+                    "계속기업가치 현재가치",
+                    _details["계속기업가치 현재가치"] / 1_000_000,
+                    "trillion",
+                ),
+                (
+                    "계속기업가치 비중",
+                    _details["계속기업가치 비중"],
+                    "rate",
+                ),
+            ]
+        elif _stage == "지분가치":
+            _ordered_items = [
+                ("기업가치", _inputs["기업가치"], "trillion"),
+                (
+                    "비영업자산 합계",
+                    _details["비영업자산 합계"] / 1_000_000,
+                    "trillion",
+                ),
+                (
+                    "금융기관차입금 (차감)",
+                    _details["금융기관차입금"] / 1_000_000,
+                    "trillion",
+                ),
+                (
+                    "리스부채 (차감)",
+                    _details["리스부채"] / 1_000_000,
+                    "trillion",
+                ),
+                (
+                    "비지배지분 (차감)",
+                    _details["비지배지분"] / 1_000_000,
+                    "trillion",
+                ),
+                (
+                    "순비영업 조정액",
+                    _inputs["순비영업 조정액"],
+                    "trillion",
+                ),
+            ]
+        elif _stage == "주당 내재가치":
+            _ordered_items = [
+                ("지분가치", _inputs["지분가치"], "trillion"),
+                (
+                    "유통주식수",
+                    _inputs["유통주식수(백만주)"],
+                    "shares",
+                ),
+                ("기준주가", _inputs["기준주가"], "won"),
+                (
+                    "내재 상승여력",
+                    _details["모델 내재 상승여력"],
+                    "rate",
+                ),
+            ]
+        else:
+            _ordered_items = [
+                (
+                    key,
+                    value,
+                    "rate" if "이익률" in key else "billion",
+                )
+                for key, value in _inputs.items()
+                if not isinstance(value, list)
+            ]
+
+        for _label, _value, _kind in _ordered_items:
+            if _kind == "rate":
+                _formatted = f"{float(_value):.2%}"
+            elif _kind == "multiple":
+                _formatted = f"{float(_value):.2f}x"
+            elif _kind == "trillion":
+                _formatted = f"{float(_value):,.3f}조원"
+            elif _kind == "shares":
+                _formatted = f"{float(_value):,.3f}백만주"
+            elif _kind == "won":
+                _formatted = f"{float(_value):,.0f}원"
+            else:
+                _formatted = f"{float(_value):,.1f}십억원"
+            _cards.append(
+                '<div class="formula-kpi">'
+                f'<div class="formula-kpi-label">{escape(str(_label))}</div>'
+                f'<div class="formula-kpi-value">{escape(_formatted)}</div>'
+                "</div>"
+            )
+        return '<div class="formula-kpi-grid">' + "".join(_cards) + "</div>"
+
+    def formula_raw_input_table(formula_result):
+        _raw_inputs = dict(formula_result["원본 입력값"])
+        _rows = []
+        for _label, _value in _raw_inputs.items():
+            if isinstance(_value, list):
+                _shown = ", ".join(f"{float(item):,.6f}" for item in _value)
+            else:
+                _shown = f"{float(_value):,.6f}"
+            _rows.append(
+                "<tr>"
+                f"<td>{escape(str(_label))}</td>"
+                f"<td>{escape(_shown)}</td>"
+                "</tr>"
+            )
+        return (
+            '<table class="formula-table">'
+            "<thead><tr><th>입력 항목</th><th>원본값</th></tr></thead>"
+            f"<tbody>{''.join(_rows)}</tbody></table>"
+        )
+
+    return format_formula_metric, formula_input_cards, formula_raw_input_table
+
+
+@app.cell
+def _(formula_result, mo):
+    _lineage_nodes = [
+        ("지역별 매출액", "매출액", False),
+        ("EBIT", "EBIT", False),
+        ("NOPAT", "FCFF", False),
+        ("FCFF", "FCFF", False),
+        ("WACC · 할인율 입력", "WACC", True),
+        ("기업가치", "DCF", False),
+        ("지분가치", "지분가치", False),
+        ("주당 내재가치", "주당 내재가치", False),
+    ]
+    _stage_order = {
+        "매출액": 0,
+        "EBIT": 1,
+        "FCFF": 3,
+        "WACC": 4,
+        "DCF": 5,
+        "지분가치": 6,
+        "주당 내재가치": 7,
+    }
+    _current_index = _stage_order[str(formula_result["단계"])]
+    _lineage_parts = []
+    for _index, (_label, _node_stage, _is_auxiliary) in enumerate(_lineage_nodes):
+        if _index == _current_index:
+            _node_class = "formula-node-current"
+        elif _is_auxiliary:
+            _node_class = "formula-node-aux"
+        elif _index < _current_index:
+            _node_class = "formula-node-complete"
+        else:
+            _node_class = "formula-node-future"
+        _lineage_parts.append(
+            f'<span class="formula-node {_node_class}">{_label}</span>'
+        )
+        if _index < len(_lineage_nodes) - 1:
+            _lineage_parts.append('<span class="formula-arrow">→</span>')
+
+    formula_lineage = mo.md(
+        '<div class="formula-lineage">'
+        + "".join(_lineage_parts)
+        + "</div>"
+    )
+    return (formula_lineage,)
+
+
+@app.cell
+def _(
+    formula_result,
+    formula_stage_selector,
+    formula_year_is_applicable,
+    formula_year_selector,
+    mo,
+):
+    _year_control = (
+        formula_year_selector
+        if formula_year_is_applicable
+        else mo.md(
+            """
+            <div class="formula-copy" style="margin-top: 8px;">
+                해당 단계는 특정 전망연도가 아닌 평가기준일 전체 모델 기준입니다.
+            </div>
+            """
+        )
+    )
+    _source_detail = mo.accordion(
+        {
+            "데이터 출처 및 모델 경로": mo.md(
+                f"`{formula_result['데이터 출처 또는 모델 경로']}`"
+            )
+        },
+        lazy=True,
+    )
+    formula_explorer_left = (
+        mo.vstack(
+            [
+                mo.md(
+                    """
+                    <div class="fcff-panel-title">분석 기준</div>
+                    <div class="fcff-panel-caption">
+                        가치평가 단계와 전망연도를 선택합니다.
+                    </div>
+                    """
+                ),
+                formula_stage_selector,
+                _year_control,
+                mo.md(
+                    f"""
+                    <div style="margin-top: 14px;">
+                        <div class="formula-label">경제적 의미</div>
+                        <div class="formula-copy">{formula_result["경제적 의미"]}</div>
+                        <div class="formula-label">부호 규칙</div>
+                        <div class="formula-copy">{formula_result["부호규칙"]}</div>
+                        <div class="formula-label">단위 통제</div>
+                        <div class="formula-copy">
+                            원본 {formula_result["원본 단위"]} · 표시 {formula_result["표시 단위"]}
+                        </div>
+                    </div>
+                    """
+                ),
+                _source_detail,
+            ],
+            gap=0.5,
+        ).style(
+            {
+                "background": "#FFFFFF",
+                "border": "1px solid #D9E2EC",
+                "border-radius": "10px",
+                "padding": "18px",
+                "min-height": "420px",
+                "box-shadow": "0 2px 8px rgba(16, 42, 67, 0.05)",
+            }
+        )
+    )
+    return (formula_explorer_left,)
+
+
+@app.cell
+def _(
+    COLORS,
+    escape,
+    format_formula_metric,
+    formula_input_cards,
+    formula_insight,
+    formula_raw_input_table,
+    formula_result,
+    mo,
+    model,
+):
+    _stage = str(formula_result["단계"])
+    _status = str(formula_result["대사상태"])
+    _badge_class = (
+        "formula-badge-pass"
+        if _status == "PASS"
+        else "formula-badge-fail"
+    )
+    _model_value = format_formula_metric(
+        formula_result["모델값"],
+        _stage,
+    )
+    _recalculated_value = format_formula_metric(
+        formula_result["재계산값"],
+        _stage,
+    )
+    _difference_value = format_formula_metric(
+        formula_result["차이"],
+        _stage,
+    )
+    _tolerance_value = format_formula_metric(
+        formula_result["허용오차"],
+        _stage,
+    )
+    _input_cards_html = formula_input_cards(formula_result)
+
+    _dcf_table_html = ""
+    if _stage == "DCF":
+        _details = dict(formula_result["계산 세부"])
+        _dcf_rows = []
+        for _row, _factor, _pv in zip(
+            model["전망"],
+            _details["할인계수"],
+            _details["FCFF 현재가치"],
+            strict=True,
+        ):
+            _dcf_rows.append(
+                "<tr>"
+                f"<td>{int(_row['연도'])}E</td>"
+                f"<td>{_row['FCFF'] / 1_000:,.1f}</td>"
+                f"<td>{_factor:.4f}</td>"
+                f"<td>{_pv / 1_000:,.1f}</td>"
+                "</tr>"
+            )
+        _dcf_table_html = (
+            '<table class="formula-table">'
+            "<thead><tr><th>연도</th><th>FCFF, 십억원</th>"
+            "<th>할인계수</th><th>현재가치, 십억원</th></tr></thead>"
+            f"<tbody>{''.join(_dcf_rows)}</tbody></table>"
+        )
+
+    _formula_detail = mo.accordion(
+        {
+            "원본 입력값 및 정밀도 확인": mo.md(
+                formula_raw_input_table(formula_result)
+            )
+        },
+        lazy=True,
+    )
+    _equation_block = mo.vstack(
+        [
+            mo.md('<div class="formula-label">모형 수식</div>'),
+            mo.md(f'$$ {formula_result["기호 수식"]} $$'),
+            mo.md(
+                f"""
+                <div class="formula-label">실제 수치 대입</div>
+                <div class="formula-substitution">
+                    {escape(str(formula_result["표시 수식"]))}
+                </div>
+                """
+            ),
+        ],
+        gap=0.25,
+    ).style(
+        {
+            "background": "#F7FAFC",
+            "border": f"1px solid {COLORS['line']}",
+            "border-radius": "9px",
+            "padding": "14px 16px",
+            "margin": "10px 0 12px 0",
+        }
+    )
+    formula_explorer_right = (
+        mo.vstack(
+            [
+                mo.md(
+                    f"""
+                    <div class="fcff-panel-title">{escape(_stage)} 계산 및 대사</div>
+                    """
+                ),
+                _equation_block,
+                mo.md(
+                    f"""
+                    {_input_cards_html}
+                    {_dcf_table_html}
+                    <div class="formula-kpi-grid">
+                        <div class="formula-kpi" style="border-top-color: {COLORS['blue']};">
+                            <div class="formula-kpi-label">모델값</div>
+                            <div class="formula-kpi-value">{_model_value}</div>
+                        </div>
+                        <div class="formula-kpi" style="border-top-color: {COLORS['teal']};">
+                            <div class="formula-kpi-label">재계산값</div>
+                            <div class="formula-kpi-value">{_recalculated_value}</div>
+                        </div>
+                        <div class="formula-kpi" style="border-top-color: {COLORS['gold']};">
+                            <div class="formula-kpi-label">차이</div>
+                            <div class="formula-kpi-value">{_difference_value}</div>
+                        </div>
+                        <div class="formula-kpi" style="border-top-color: {COLORS['muted']};">
+                            <div class="formula-kpi-label">허용오차</div>
+                            <div class="formula-kpi-value">{_tolerance_value}</div>
+                        </div>
+                    </div>
+                    <span class="formula-badge {_badge_class}">{_status}</span>
+                    <div class="formula-insight">{escape(formula_insight)}</div>
+                    """
+                ),
+                _formula_detail,
+            ],
+            gap=0.5,
+        ).style(
+            {
+                "background": COLORS["surface"],
+                "border": f"1px solid {COLORS['line']}",
+                "border-radius": "10px",
+                "padding": "18px",
+                "min-height": "420px",
+                "box-shadow": "0 2px 8px rgba(16, 42, 67, 0.05)",
+            }
+        )
+    )
+    return (formula_explorer_right,)
+
+
+@app.cell
+def _(
+    formula_explorer_left,
+    formula_explorer_right,
+    formula_lineage,
+    mo,
+):
+    _formula_header = mo.md(
+        """
+        <div class="section-title">가치평가 산식 및 계산 계보</div>
+        <div class="section-subtitle">
+            공시자료에서 주당 내재가치까지의 계산 논리와 모델 대사
+        </div>
+        """
+    )
+    _formula_body = mo.hstack(
+        [formula_explorer_left, formula_explorer_right],
+        widths=[0.38, 0.62],
+        gap=1,
+        align="stretch",
+    )
+    formula_explorer_section = mo.vstack(
+        [_formula_header, formula_lineage, _formula_body],
+        gap=0.7,
+    )
+    return (formula_explorer_section,)
+
+
+@app.cell
+def _(
+    executive_top,
+    formula_explorer_section,
+    mo,
+    visual_grid,
+    visual_section_header,
+):
     valuation_overview_page = mo.vstack(
         [
             executive_top,
             visual_section_header,
             visual_grid,
+            formula_explorer_section,
         ],
         gap=1.1,
     )

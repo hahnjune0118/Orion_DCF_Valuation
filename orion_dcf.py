@@ -210,6 +210,20 @@ def run_orion_dcf(
 
     wacc_result["기준 WACC"] = base_wacc
 
+    # Preserve the inputs already used above so downstream review tools can
+    # reproduce the WACC calculation without reopening or mutating Excel.
+    wacc_result["구성요소"] = {
+        "무위험수익률": assumptions["C30"].value,
+        "주식시장위험프리미엄": assumptions["C31"].value,
+        "베타": assumptions["C32"].value,
+        "국가위험프리미엄": assumptions["C33"].value,
+        "세전 타인자본비용": assumptions["C34"].value,
+        "법인세율": assumptions["F16"].value,
+        "자기자본 비중": assumptions["C35"].value,
+        "타인자본 비중": assumptions["C36"].value,
+        "WACC 조정": wacc_adjustment,
+    }
+
     wacc_result["WACC"] = (
         base_wacc + wacc_adjustment
     )
@@ -234,6 +248,8 @@ def run_orion_dcf(
             scenario_terminal_growth_rate
         ),
     )
+    dcf_result["영구성장률"] = scenario_terminal_growth_rate
+    dcf_result["명시적 전망기간"] = len(forecast_results)
 
     # 6. 기업가치에서 지분가치로 조정
     equity_result = calculate_equity_bridge(
@@ -275,6 +291,7 @@ def run_orion_dcf(
         ),
         current_share_price=historical["F68"].value,
     )
+    equity_result["기준주가"] = historical["F68"].value
 
     return {
         "지역별 매출액": segment_forecasts,
