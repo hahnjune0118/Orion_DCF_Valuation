@@ -158,5 +158,8 @@ def test_waterfall_figure_uses_expected_order_signs_and_unit(forecast_rows):
     assert trace.y[3] > 0
     assert trace.y[4] < 0
     assert trace.y[5] < 0
+    assert trace.increasing.marker.color == "#2A9D8F"
+    assert trace.decreasing.marker.color == "#E07A5F"
+    assert trace.totals.marker.color == "#3478B8"
     assert figure.layout.yaxis.title.text == "십억원"
     assert result == original

@@ -12,9 +12,27 @@ def _():
     import plotly.graph_objects as go
 
     from pathlib import Path
+    from dashboard_components import (
+        build_fcff_waterfall_figure,
+        build_fcff_waterfall_insight,
+        calculate_fcff_waterfall_kpis,
+        prepare_fcff_waterfall_data,
+        select_forecast_row,
+    )
     from orion_dcf import run_orion_dcf
 
-    return Path, go, mo, pd, run_orion_dcf
+    return (
+        Path,
+        build_fcff_waterfall_figure,
+        build_fcff_waterfall_insight,
+        calculate_fcff_waterfall_kpis,
+        go,
+        mo,
+        pd,
+        prepare_fcff_waterfall_data,
+        run_orion_dcf,
+        select_forecast_row,
+    )
 
 
 @app.cell
@@ -95,6 +113,9 @@ def _(mo):
         "background": "#F4F7FA",
         "open_blue": "#EAF2F8",
         "open_gold": "#FBF4E6",
+        "waterfall_total": "#3478B8",
+        "waterfall_increase": "#2A9D8F",
+        "waterfall_decrease": "#E07A5F",
     }
 
     dashboard_css = mo.md(
@@ -191,6 +212,57 @@ def _(mo):
                 color: {COLORS["muted"]};
                 font-size: 12px;
                 margin-bottom: 8px;
+            }}
+
+            .fcff-panel-title {{
+                color: {COLORS["navy"]};
+                font-size: 15px;
+                font-weight: 750;
+                margin-bottom: 4px;
+            }}
+
+            .fcff-panel-caption {{
+                color: {COLORS["muted"]};
+                font-size: 11px;
+                line-height: 1.45;
+                margin-bottom: 14px;
+            }}
+
+            .fcff-mini-grid {{
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+                margin: 14px 0;
+            }}
+
+            .fcff-mini-kpi {{
+                background: {COLORS["background"]};
+                border-radius: 8px;
+                padding: 10px;
+            }}
+
+            .fcff-mini-label {{
+                color: {COLORS["muted"]};
+                font-size: 10px;
+                font-weight: 700;
+            }}
+
+            .fcff-mini-value {{
+                color: {COLORS["navy"]};
+                font-size: 17px;
+                font-weight: 780;
+                margin-top: 3px;
+            }}
+
+            .fcff-insight {{
+                border-left: 3px solid {COLORS["gold"]};
+                background: {COLORS["open_gold"]};
+                color: {COLORS["ink"]};
+                border-radius: 0 8px 8px 0;
+                padding: 11px 12px;
+                font-size: 11px;
+                line-height: 1.55;
+                margin-top: 10px;
             }}
         </style>
         """
@@ -610,6 +682,18 @@ def _(forecast_df):
 
 
 @app.cell
+def _(mo):
+    fcff_year_selector = mo.ui.dropdown(
+        options={f"{year}E": year for year in range(2026, 2031)},
+        value="2026E",
+        label="분석 연도",
+        allow_select_none=False,
+        full_width=True,
+    )
+    return (fcff_year_selector,)
+
+
+@app.cell
 def _(COLORS, apply_chart_style, forecast_display, go):
     fcff_fig = go.Figure()
 
@@ -699,6 +783,115 @@ def _(COLORS, apply_chart_style, forecast_display, go):
 
 
 @app.cell
+def _(
+    apply_chart_style,
+    build_fcff_waterfall_figure,
+    build_fcff_waterfall_insight,
+    calculate_fcff_waterfall_kpis,
+    fcff_year_selector,
+    forecast_df,
+    prepare_fcff_waterfall_data,
+    select_forecast_row,
+):
+    _selected_fcff_row = select_forecast_row(
+        forecast_df,
+        fcff_year_selector.value,
+    )
+    _fcff_waterfall_data = prepare_fcff_waterfall_data(
+        _selected_fcff_row
+    )
+    fcff_waterfall_kpis = calculate_fcff_waterfall_kpis(
+        _fcff_waterfall_data
+    )
+    fcff_waterfall_insight = build_fcff_waterfall_insight(
+        _fcff_waterfall_data,
+        fcff_waterfall_kpis,
+    )
+    fcff_waterfall_fig = build_fcff_waterfall_figure(
+        _fcff_waterfall_data
+    )
+    fcff_waterfall_fig = apply_chart_style(
+        fcff_waterfall_fig,
+        height=390,
+    )
+    return (
+        fcff_waterfall_fig,
+        fcff_waterfall_insight,
+        fcff_waterfall_kpis,
+    )
+
+
+@app.cell
+def _(
+    COLORS,
+    fcff_waterfall_fig,
+    fcff_waterfall_insight,
+    fcff_waterfall_kpis,
+    fcff_year_selector,
+    mo,
+):
+    _fcff_kpis = fcff_waterfall_kpis
+    fcff_waterfall_summary = (
+        mo.vstack(
+            [
+                mo.md(
+                    """
+                    <div class="fcff-panel-title">현금흐름 전환 분석</div>
+                    <div class="fcff-panel-caption">
+                        연도를 선택해 EBIT에서 FCFF까지의 전환 구조를 검토합니다.
+                    </div>
+                    """
+                ),
+                fcff_year_selector,
+                mo.md(
+                    f"""
+                    <div class="fcff-mini-grid">
+                        <div class="fcff-mini-kpi">
+                            <div class="fcff-mini-label">EBIT</div>
+                            <div class="fcff-mini-value">{_fcff_kpis["EBIT"]:,.1f}</div>
+                        </div>
+                        <div class="fcff-mini-kpi">
+                            <div class="fcff-mini-label">NOPAT</div>
+                            <div class="fcff-mini-value">{_fcff_kpis["NOPAT"]:,.1f}</div>
+                        </div>
+                        <div class="fcff-mini-kpi">
+                            <div class="fcff-mini-label">FCFF</div>
+                            <div class="fcff-mini-value">{_fcff_kpis["FCFF"]:,.1f}</div>
+                        </div>
+                        <div class="fcff-mini-kpi">
+                            <div class="fcff-mini-label">현금전환율</div>
+                            <div class="fcff-mini-value">{_fcff_kpis["현금전환율"]:.1%}</div>
+                        </div>
+                    </div>
+                    <div class="fcff-panel-caption">금액 단위: 십억원</div>
+                    <div class="fcff-insight">{fcff_waterfall_insight}</div>
+                    """
+                ),
+            ],
+            gap=0.5,
+        )
+        .style(
+            {
+                "background": COLORS["surface"],
+                "border": f"1px solid {COLORS['line']}",
+                "border-radius": "10px",
+                "padding": "18px",
+                "min-height": "390px",
+                "box-shadow": "0 2px 8px rgba(16, 42, 67, 0.05)",
+            }
+        )
+    )
+    fcff_waterfall_view = mo.ui.plotly(fcff_waterfall_fig)
+    fcff_waterfall_row = mo.hstack(
+        [fcff_waterfall_summary, fcff_waterfall_view],
+        widths=[0.25, 0.75],
+        gap=1,
+        align="stretch",
+    )
+    return (fcff_waterfall_row,)
+
+
+@app.cell
 def _(enterprise_value, equity_value, model):
     equity_bridge = model["지분가치"]
 
@@ -771,13 +964,13 @@ def _(
                 )
             ),
             increasing=dict(
-                marker=dict(color=COLORS["blue"])
+                marker=dict(color=COLORS["waterfall_increase"])
             ),
             decreasing=dict(
-                marker=dict(color=COLORS["orange"])
+                marker=dict(color=COLORS["waterfall_decrease"])
             ),
             totals=dict(
-                marker=dict(color=COLORS["navy"])
+                marker=dict(color=COLORS["waterfall_total"])
             ),
             hovertemplate=(
                 "%{x}<br>"
@@ -807,7 +1000,14 @@ def _(
 
 
 @app.cell
-def _(bridge_fig, fcff_fig, mo, scenario_fig, sensitivity_fig):
+def _(
+    bridge_fig,
+    fcff_fig,
+    fcff_waterfall_row,
+    mo,
+    scenario_fig,
+    sensitivity_fig,
+):
     sensitivity_view = mo.ui.plotly(sensitivity_fig)
     scenario_view = mo.ui.plotly(scenario_fig)
     fcff_view = mo.ui.plotly(fcff_fig)
@@ -837,6 +1037,7 @@ def _(bridge_fig, fcff_fig, mo, scenario_fig, sensitivity_fig):
                 widths=[1, 1],
                 gap=1,
             ),
+            fcff_waterfall_row,
         ],
         gap=1,
     )
