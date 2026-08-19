@@ -3,7 +3,7 @@
 오리온의 2025년 K-IFRS 연결재무제표를 기반으로 구축한 **FCFF 기준 DCF 가치평가 대시보드**입니다.  
 지역별 매출액 전망부터 기업가치·지분가치·주당 내재가치까지 하나의 분석 체계로 연결하고, 주요 가정의 변화가 가치평가 결과에 미치는 영향을 대화형 시각화로 구현했습니다.
 
-[▶ 대화형 가치평가 대시보드 실행](https://molab.marimo.io/notebooks/nb_EN5vQP1GqmENwwm67uXrCr/app)
+[▶ 대화형 가치평가 대시보드 실행](https://molab.marimo.io/notebooks/nb_Xe1vRaYTmkbft3NXVef2ag/app)
 
 > 평가기준일: 2025년 12월 31일 · 표시통화: 백만원(주당가치: 원) · 평가방법: FCFF 기준 DCF
 
