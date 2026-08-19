@@ -8,6 +8,7 @@ changes the source model values.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from copy import deepcopy
 from math import isfinite
 
 import plotly.graph_objects as go
@@ -21,6 +22,16 @@ WATERFALL_INCREASE_COLOR = "#2A9D8F"
 WATERFALL_DECREASE_COLOR = "#E07A5F"
 FCFF_RECONCILIATION_TOLERANCE = 1e-6
 SUPPORTED_FORECAST_YEARS = frozenset(range(2026, 2031))
+FORMULA_RECONCILIATION_TOLERANCE = 1e-6
+SUPPORTED_FORMULA_STAGES = (
+    "매출액",
+    "EBIT",
+    "FCFF",
+    "WACC",
+    "DCF",
+    "지분가치",
+    "주당 내재가치",
+)
 
 REQUIRED_FCFF_FIELDS = (
     "연도",
@@ -432,3 +443,522 @@ def build_fcff_waterfall_figure(
     )
 
     return figure
+
+
+def build_valuation_formula_catalog() -> dict[str, dict[str, object]]:
+    """Return the formulas actually implemented by the Orion model.
+
+    The catalog is presentation metadata only.  Every call returns a deep
+    copy so callers cannot mutate the shared definitions.
+    """
+
+    catalog = {
+        "매출액": {
+            "경제적 의미": "지역별 매출액 전망을 합산한 연결 매출액",
+            "기호 수식": r"Revenue_t = \sum_s Revenue_{s,t}",
+            "부호규칙": "지역별 매출액과 연결 매출액은 양수로 표시",
+            "데이터 출처 또는 모델 경로": (
+                "model['전망'][연도]; 가정!F7:J9; 과거재무제표!F71:F73"
+            ),
+        },
+        "EBIT": {
+            "경제적 의미": "매출액에서 매출원가·판매비·관리비를 차감한 영업이익",
+            "기호 수식": r"EBIT_t = Revenue_t \times EBIT\ Margin_t",
+            "부호규칙": "영업이익은 이익 발생 시 양수",
+            "데이터 출처 또는 모델 경로": (
+                "model['전망'][연도]; 가정!F13:J15"
+            ),
+        },
+        "FCFF": {
+            "경제적 의미": "자본구조와 무관하게 자본제공자에게 귀속되는 잉여현금흐름",
+            "기호 수식": (
+                r"FCFF_t = NOPAT_t + D\&A_t - Capex_t - \Delta NWC_t"
+            ),
+            "부호규칙": (
+                "Capex는 차감; NWC 증가는 현금유출, NWC 감소는 운전자본 "
+                "회수에 따른 현금유입"
+            ),
+            "데이터 출처 또는 모델 경로": (
+                "model['전망'][연도]; 가정!F16:J26"
+            ),
+        },
+        "WACC": {
+            "경제적 의미": "자기자본과 타인자본 제공자의 가중평균 요구수익률",
+            "기호 수식": (
+                r"WACC = K_e w_E + K_d(1-T)w_D + Adjustment"
+            ),
+            "부호규칙": "자본비용과 자본구조 비중은 양수; 비중 합계는 100%",
+            "데이터 출처 또는 모델 경로": (
+                "model['WACC']; 가정!C30:C36; 법인세율 가정!F16"
+            ),
+        },
+        "DCF": {
+            "경제적 의미": "명시적 전망 FCFF와 계속기업가치를 기준일 현재가치로 환산한 기업가치",
+            "기호 수식": (
+                r"EV = \sum_{t=1}^{n}\frac{FCFF_t}{(1+WACC)^t} + "
+                r"\frac{FCFF_n(1+g)}{(WACC-g)(1+WACC)^n}"
+            ),
+            "부호규칙": "WACC는 영구성장률보다 커야 함",
+            "데이터 출처 또는 모델 경로": (
+                "model['전망']; model['WACC']; model['DCF']; 가정!C37"
+            ),
+        },
+        "지분가치": {
+            "경제적 의미": "기업가치에 순비영업 조정액을 반영한 지배기업 보통주주 귀속 가치",
+            "기호 수식": r"Equity\ Value = EV + Net\ Nonoperating\ Adjustment",
+            "부호규칙": (
+                "비영업자산은 가산; 금융부채·리스부채·비지배지분은 차감"
+            ),
+            "데이터 출처 또는 모델 경로": (
+                "model['DCF']['기업가치']; model['지분가치']"
+            ),
+        },
+        "주당 내재가치": {
+            "경제적 의미": "지분가치를 유통주식수로 나눈 보통주 1주당 가치",
+            "기호 수식": (
+                r"Value\ per\ Share = \frac{Equity\ Value}{Shares\ Outstanding}"
+            ),
+            "부호규칙": "유통주식수는 0보다 커야 함",
+            "데이터 출처 또는 모델 경로": (
+                "model['지분가치']; 과거재무제표!F67:F68"
+            ),
+        },
+    }
+    return deepcopy(catalog)
+
+
+def _require_mapping(
+    value: object,
+    name: str,
+) -> Mapping[str, object]:
+    if not isinstance(value, Mapping):
+        raise TypeError(f"{name}은(는) 매핑이어야 합니다.")
+    return value
+
+
+def _required_value(
+    mapping: Mapping[str, object],
+    key: str,
+    path: str,
+) -> float:
+    if key not in mapping:
+        raise KeyError(f"Formula Explorer 필수 입력 누락: {path}['{key}']")
+    return _finite_number(mapping, key)
+
+
+def _display_mapping(
+    raw_inputs: Mapping[str, object],
+    divisor: float,
+) -> dict[str, object]:
+    displayed: dict[str, object] = {}
+    for key, value in raw_inputs.items():
+        if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+            displayed[key] = [float(item) / divisor for item in value]
+        else:
+            displayed[key] = float(value) / divisor
+    return displayed
+
+
+def reconcile_formula_result(
+    formula_result: Mapping[str, object],
+) -> dict[str, object]:
+    """Return a copied formula result with a deterministic reconciliation."""
+
+    if not isinstance(formula_result, Mapping):
+        raise TypeError("formula_result는 매핑이어야 합니다.")
+    required = ("재계산값", "모델값", "허용오차")
+    missing = [key for key in required if key not in formula_result]
+    if missing:
+        raise KeyError(
+            "Formula Explorer 대사 필수 항목 누락: " + ", ".join(missing)
+        )
+
+    result = deepcopy(dict(formula_result))
+    recalculated = _required_value(result, "재계산값", "formula_result")
+    model_value = _required_value(result, "모델값", "formula_result")
+    tolerance = _required_value(result, "허용오차", "formula_result")
+    if tolerance < 0:
+        raise ValueError("허용오차는 음수일 수 없습니다.")
+
+    difference = recalculated - model_value
+    result["차이"] = difference
+    result["대사상태"] = "PASS" if abs(difference) <= tolerance else "FAIL"
+    return result
+
+
+def _formula_result(
+    *,
+    stage: str,
+    year: int | None,
+    display_formula: str,
+    raw_inputs: Mapping[str, object],
+    display_inputs: Mapping[str, object],
+    recalculated: float,
+    model_value: float,
+    model_unit: str,
+    display_unit: str,
+    details: Mapping[str, object] | None = None,
+) -> dict[str, object]:
+    metadata = build_valuation_formula_catalog()[stage]
+    result: dict[str, object] = {
+        "단계": stage,
+        "연도": year,
+        "경제적 의미": metadata["경제적 의미"],
+        "기호 수식": metadata["기호 수식"],
+        "표시 수식": display_formula,
+        "원본 입력값": deepcopy(dict(raw_inputs)),
+        "표시 입력값": deepcopy(dict(display_inputs)),
+        "재계산값": recalculated,
+        "모델값": model_value,
+        "차이": recalculated - model_value,
+        "허용오차": FORMULA_RECONCILIATION_TOLERANCE,
+        "대사상태": "",
+        "원본 단위": model_unit,
+        "표시 단위": display_unit,
+        "부호규칙": metadata["부호규칙"],
+        "데이터 출처 또는 모델 경로": metadata[
+            "데이터 출처 또는 모델 경로"
+        ],
+    }
+    if details is not None:
+        result["계산 세부"] = deepcopy(dict(details))
+    return reconcile_formula_result(result)
+
+
+def prepare_formula_explorer_data(
+    model: Mapping[str, object],
+    stage: str,
+    year: object | None = None,
+) -> dict[str, object]:
+    """Recalculate one supported valuation stage from immutable model output."""
+
+    model_mapping = _require_mapping(model, "model")
+    if stage not in SUPPORTED_FORMULA_STAGES:
+        raise ValueError(
+            f"지원하지 않는 가치평가 단계입니다: {stage}. "
+            f"지원 단계: {', '.join(SUPPORTED_FORMULA_STAGES)}"
+        )
+
+    forecast = model_mapping.get("전망")
+    if stage in {"매출액", "EBIT", "FCFF"}:
+        if year is None:
+            raise ValueError(f"{stage} 단계에는 분석 연도가 필요합니다.")
+        row = select_forecast_row(forecast, year)
+        selected_year = _validated_year(year)
+
+        if stage == "매출액":
+            keys = ("한국 매출액", "중국 매출액", "기타 국가 매출액")
+            raw = {
+                key: _required_value(row, key, "model['전망'][연도]")
+                for key in keys
+            }
+            model_value = _required_value(row, "매출액", "model['전망'][연도]")
+            recalculated = sum(raw.values())
+            displayed = _display_mapping(raw, MODEL_TO_DISPLAY_DIVISOR)
+            formula = " + ".join(f"{displayed[key]:,.1f}" for key in keys)
+            formula += f" = {model_value / MODEL_TO_DISPLAY_DIVISOR:,.1f}십억원"
+            return _formula_result(
+                stage=stage,
+                year=selected_year,
+                display_formula=formula,
+                raw_inputs=raw,
+                display_inputs=displayed,
+                recalculated=recalculated,
+                model_value=model_value,
+                model_unit=MODEL_UNIT,
+                display_unit=DISPLAY_UNIT,
+            )
+
+        if stage == "EBIT":
+            revenue = _required_value(row, "매출액", "model['전망'][연도]")
+            margin = _required_value(row, "영업이익률", "model['전망'][연도]")
+            model_value = _required_value(row, "EBIT", "model['전망'][연도]")
+            recalculated = revenue * margin
+            raw = {"매출액": revenue, "영업이익률": margin}
+            displayed = {
+                "매출액": revenue / MODEL_TO_DISPLAY_DIVISOR,
+                "영업이익률": margin,
+            }
+            formula = (
+                f"{displayed['매출액']:,.1f}십억원 × "
+                f"{margin:.1%} = {model_value / MODEL_TO_DISPLAY_DIVISOR:,.1f}십억원"
+            )
+            return _formula_result(
+                stage=stage,
+                year=selected_year,
+                display_formula=formula,
+                raw_inputs=raw,
+                display_inputs=displayed,
+                recalculated=recalculated,
+                model_value=model_value,
+                model_unit=MODEL_UNIT,
+                display_unit=DISPLAY_UNIT,
+            )
+
+        nopat = _required_value(row, "NOPAT", "model['전망'][연도]")
+        depreciation = _required_value(row, "D&A", "model['전망'][연도]")
+        capex = _required_value(row, "Capex", "model['전망'][연도]")
+        change_in_nwc = _required_value(row, "NWC 증감", "model['전망'][연도]")
+        ebit = _required_value(row, "EBIT", "model['전망'][연도]")
+        model_value = _required_value(row, "FCFF", "model['전망'][연도]")
+        recalculated = nopat + depreciation - capex - change_in_nwc
+        raw = {
+            "EBIT": ebit,
+            "영업관련 법인세": ebit - nopat,
+            "NOPAT": nopat,
+            "D&A": depreciation,
+            "Capex": capex,
+            "NWC 증감": change_in_nwc,
+        }
+        displayed = _display_mapping(raw, MODEL_TO_DISPLAY_DIVISOR)
+        formula = (
+            f"{displayed['NOPAT']:,.1f} + {displayed['D&A']:,.1f} - "
+            f"{displayed['Capex']:,.1f} - ({displayed['NWC 증감']:,.1f}) "
+            f"= {model_value / MODEL_TO_DISPLAY_DIVISOR:,.1f}십억원"
+        )
+        return _formula_result(
+            stage=stage,
+            year=selected_year,
+            display_formula=formula,
+            raw_inputs=raw,
+            display_inputs=displayed,
+            recalculated=recalculated,
+            model_value=model_value,
+            model_unit=MODEL_UNIT,
+            display_unit=DISPLAY_UNIT,
+            details={"영업관련 법인세": ebit - nopat},
+        )
+
+    wacc = _require_mapping(model_mapping.get("WACC"), "model['WACC']")
+    if stage == "WACC":
+        components = _require_mapping(wacc.get("구성요소"), "model['WACC']['구성요소']")
+        rf = _required_value(components, "무위험수익률", "model['WACC']['구성요소']")
+        erp = _required_value(components, "주식시장위험프리미엄", "model['WACC']['구성요소']")
+        beta = _required_value(components, "베타", "model['WACC']['구성요소']")
+        crp = _required_value(components, "국가위험프리미엄", "model['WACC']['구성요소']")
+        pre_tax_kd = _required_value(components, "세전 타인자본비용", "model['WACC']['구성요소']")
+        tax_rate = _required_value(components, "법인세율", "model['WACC']['구성요소']")
+        equity_weight = _required_value(components, "자기자본 비중", "model['WACC']['구성요소']")
+        debt_weight = _required_value(components, "타인자본 비중", "model['WACC']['구성요소']")
+        adjustment = _required_value(components, "WACC 조정", "model['WACC']['구성요소']")
+        cost_of_equity = rf + beta * erp + crp
+        after_tax_debt_cost = pre_tax_kd * (1 - tax_rate)
+        recalculated = (
+            cost_of_equity * equity_weight
+            + after_tax_debt_cost * debt_weight
+            + adjustment
+        )
+        model_value = _required_value(wacc, "WACC", "model['WACC']")
+        raw = dict(components)
+        displayed = {key: float(value) for key, value in raw.items()}
+        formula = (
+            f"{cost_of_equity:.2%} × {equity_weight:.1%} + "
+            f"{after_tax_debt_cost:.2%} × {debt_weight:.1%} + "
+            f"{adjustment:.2%} = {model_value:.2%}"
+        )
+        return _formula_result(
+            stage=stage,
+            year=None,
+            display_formula=formula,
+            raw_inputs=raw,
+            display_inputs=displayed,
+            recalculated=recalculated,
+            model_value=model_value,
+            model_unit="비율",
+            display_unit="%",
+            details={
+                "자기자본비용": cost_of_equity,
+                "세후 타인자본비용": after_tax_debt_cost,
+                "자본구조 비중 합계": equity_weight + debt_weight,
+            },
+        )
+
+    dcf = _require_mapping(model_mapping.get("DCF"), "model['DCF']")
+    if stage == "DCF":
+        forecast_rows = forecast
+        if not isinstance(forecast_rows, Sequence) or isinstance(
+            forecast_rows, (str, bytes)
+        ):
+            raise TypeError("model['전망']은 행 매핑의 시퀀스여야 합니다.")
+        fcff_values = [
+            _required_value(
+                _require_mapping(row, "model['전망'] 행"),
+                "FCFF",
+                "model['전망'] 행",
+            )
+            for row in forecast_rows
+        ]
+        if not fcff_values:
+            raise ValueError("DCF 계산을 위한 FCFF 전망값이 없습니다.")
+        wacc_value = _required_value(wacc, "WACC", "model['WACC']")
+        growth = _required_value(dcf, "영구성장률", "model['DCF']")
+        if wacc_value <= growth:
+            raise ValueError("WACC는 영구성장률보다 커야 합니다.")
+        discount_factors = [
+            1 / (1 + wacc_value) ** period
+            for period in range(1, len(fcff_values) + 1)
+        ]
+        present_values = [
+            fcff * factor
+            for fcff, factor in zip(fcff_values, discount_factors, strict=True)
+        ]
+        forecast_pv = sum(present_values)
+        terminal_value = (
+            fcff_values[-1] * (1 + growth) / (wacc_value - growth)
+        )
+        terminal_pv = terminal_value * discount_factors[-1]
+        recalculated = forecast_pv + terminal_pv
+        model_value = _required_value(dcf, "기업가치", "model['DCF']")
+        raw = {
+            "FCFF 전망": fcff_values,
+            "WACC": wacc_value,
+            "영구성장률": growth,
+        }
+        displayed = {
+            "FCFF 전망": [value / 1_000_000 for value in fcff_values],
+            "WACC": wacc_value,
+            "영구성장률": growth,
+        }
+        formula = (
+            f"명시적 전망 {forecast_pv / 1_000_000:,.2f}조원 + "
+            f"계속기업가치 {terminal_pv / 1_000_000:,.2f}조원 "
+            f"= {model_value / 1_000_000:,.2f}조원"
+        )
+        return _formula_result(
+            stage=stage,
+            year=None,
+            display_formula=formula,
+            raw_inputs=raw,
+            display_inputs=displayed,
+            recalculated=recalculated,
+            model_value=model_value,
+            model_unit=MODEL_UNIT,
+            display_unit="조원",
+            details={
+                "할인계수": discount_factors,
+                "FCFF 현재가치": present_values,
+                "추정기간 FCFF 현재가치": forecast_pv,
+                "계속기업가치": terminal_value,
+                "계속기업가치 현재가치": terminal_pv,
+                "계속기업가치 비중": terminal_pv / recalculated,
+            },
+        )
+
+    equity = _require_mapping(model_mapping.get("지분가치"), "model['지분가치']")
+    if stage == "지분가치":
+        enterprise_value = _required_value(dcf, "기업가치", "model['DCF']")
+        adjustment = _required_value(
+            equity, "순비영업 조정액", "model['지분가치']"
+        )
+        model_value = _required_value(equity, "지분가치", "model['지분가치']")
+        recalculated = enterprise_value + adjustment
+        raw = {"기업가치": enterprise_value, "순비영업 조정액": adjustment}
+        displayed = _display_mapping(raw, 1_000_000.0)
+        formula = (
+            f"{displayed['기업가치']:,.2f}조원 + "
+            f"{displayed['순비영업 조정액']:,.2f}조원 "
+            f"= {model_value / 1_000_000:,.2f}조원"
+        )
+        return _formula_result(
+            stage=stage,
+            year=None,
+            display_formula=formula,
+            raw_inputs=raw,
+            display_inputs=displayed,
+            recalculated=recalculated,
+            model_value=model_value,
+            model_unit=MODEL_UNIT,
+            display_unit="조원",
+            details={
+                "비영업자산 합계": _required_value(
+                    equity, "비영업자산 합계", "model['지분가치']"
+                ),
+                "리스부채": _required_value(
+                    equity, "리스부채", "model['지분가치']"
+                ),
+                "금융기관차입금": _required_value(
+                    equity, "금융기관차입금", "model['지분가치']"
+                ),
+                "비지배지분": _required_value(
+                    equity, "비지배지분", "model['지분가치']"
+                ),
+            },
+        )
+
+    equity_value = _required_value(equity, "지분가치", "model['지분가치']")
+    shares = _required_value(
+        equity, "유통주식수(백만주)", "model['지분가치']"
+    )
+    if shares <= 0:
+        raise ValueError("유통주식수는 0보다 커야 합니다.")
+    recalculated = equity_value / shares
+    model_value = _required_value(
+        equity, "주당 내재가치", "model['지분가치']"
+    )
+    current_price = _required_value(equity, "기준주가", "model['지분가치']")
+    upside = recalculated / current_price - 1
+    model_upside = _required_value(
+        equity, "내재 상승여력", "model['지분가치']"
+    )
+    raw = {
+        "지분가치": equity_value,
+        "유통주식수(백만주)": shares,
+        "기준주가": current_price,
+    }
+    displayed = {
+        "지분가치": equity_value / 1_000_000,
+        "유통주식수(백만주)": shares,
+        "기준주가": current_price,
+    }
+    formula = (
+        f"{displayed['지분가치']:,.2f}조원 ÷ "
+        f"{shares:,.3f}백만주 = {model_value:,.0f}원"
+    )
+    return _formula_result(
+        stage=stage,
+        year=None,
+        display_formula=formula,
+        raw_inputs=raw,
+        display_inputs=displayed,
+        recalculated=recalculated,
+        model_value=model_value,
+        model_unit="원/주",
+        display_unit="원/주",
+        details={
+            "재계산 내재 상승여력": upside,
+            "모델 내재 상승여력": model_upside,
+            "내재 상승여력 차이": upside - model_upside,
+        },
+    )
+
+
+def build_formula_explorer_insight(
+    formula_result: Mapping[str, object],
+) -> str:
+    """Create a factual interpretation without inferring business causes."""
+
+    reconciled = reconcile_formula_result(formula_result)
+    stage = str(reconciled.get("단계", ""))
+    status = str(reconciled["대사상태"])
+    difference = _required_value(reconciled, "차이", "formula_result")
+    year = reconciled.get("연도")
+    period = f"{int(year)}E " if year is not None else ""
+    base = (
+        f"{period}{stage} 재계산 결과는 모델값과 "
+        f"{abs(difference):,.6f}{reconciled.get('원본 단위', '')} 차이로 "
+        f"{status}입니다."
+    )
+    if stage == "FCFF":
+        raw = _require_mapping(reconciled.get("원본 입력값"), "원본 입력값")
+        change_in_nwc = _required_value(raw, "NWC 증감", "원본 입력값")
+        if change_in_nwc > 0:
+            return base + " NWC 증가는 현금유출로 반영됩니다."
+        if change_in_nwc < 0:
+            return base + " NWC 감소는 운전자본 회수에 따른 현금유입으로 반영됩니다."
+        return base + " NWC 증감에 따른 현금흐름 영향은 없습니다."
+    if stage == "DCF":
+        details = _require_mapping(reconciled.get("계산 세부"), "계산 세부")
+        terminal_pv = _required_value(details, "계속기업가치 현재가치", "계산 세부")
+        enterprise_value = _required_value(reconciled, "모델값", "formula_result")
+        return base + f" 계속기업가치 현재가치 비중은 {terminal_pv / enterprise_value:.1%}입니다."
+    return base
