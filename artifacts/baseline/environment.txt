@@ -1,0 +1,96 @@
+ORION DCF BASELINE EXECUTION ENVIRONMENT
+========================================
+Baseline ID: orion-dcf-2025-12-31-v1
+Captured at (UTC): 2026-08-18T06:07:53.707668+00:00
+Initial repository state: clean main working tree
+Baseline source commit: 0f54ca2000c25a75649288887b806028ad5a5433
+Working branch: valuation-v2
+Repository: hahnjune0118/Orion_DCF_Valuation
+
+RUNTIME
+-------
+Python: 3.12.13
+Python executable: /workspace/scratch/ed6fb21064be/orion_valuation_v2/.venv/bin/python
+Implementation: CPython
+Platform: Linux-6.18.35-x86_64-with-glibc2.39
+Git: git version 2.51.1
+
+DIRECT DEPENDENCIES
+-------------------
+- marimo==0.23.16
+- openpyxl==3.1.5
+- pandas==3.0.4
+- plotly==6.8.0
+- pytest==9.1.1
+
+INPUT WORKBOOK
+--------------
+Path: data/raw/orion_dcf.xlsx
+SHA-256: 1e57dc7508b04b5e1c6ee546e8435634589427cc2828f0d9542806b394acde8d
+Size: 111081 bytes
+Filesystem modified at (UTC): 2026-08-18T05:59:56.312994+00:00
+Workbook created at: 2026-08-17T07:40:06
+Workbook modified at: 2026-08-17T12:40:32
+Workbook last modified by: 연한준
+Sheets (14): 개요, 요약, 가정, 과거재무제표, 매출액추정, 영업실적추정, NWC, Capex_D&A, WACC, DCF, 기업가치_지분가치, 민감도분석, 검증, 출처
+Formula cells: 677
+Cached formula errors: 0
+Git history for workbook: commit e9fa4a7a00100e1a3ec078d81847c110a7a201c6 (2026-08-18T11:23:09+09:00)
+
+MODEL FILE FINGERPRINTS
+-----------------------
+- data/raw/orion_dcf.xlsx: sha256=1e57dc7508b04b5e1c6ee546e8435634589427cc2828f0d9542806b394acde8d; size=111081 bytes; filesystem_modified_at_utc=2026-08-18T05:59:56.312994+00:00
+- requirements.txt: sha256=7d7282693aa7c7b8de44d07e496869cf1d3edaa9dff6810a10489aa1ff05f611; size=74 bytes; filesystem_modified_at_utc=2026-08-18T05:59:56.312994+00:00
+- cash_flow_model.py: sha256=60a5b15946a3c2dda77ee94b922809dbd0d3516b8e8f7179f1562c0ca705e6b2; size=1453 bytes; filesystem_modified_at_utc=2026-08-18T05:59:56.311294+00:00
+- equity_bridge.py: sha256=54a6d52f3da0db176c552f9315dde9688e47b72b957000918107f78dc89cd2aa; size=2964 bytes; filesystem_modified_at_utc=2026-08-18T05:59:56.312994+00:00
+- fcff_model.py: sha256=57c82b70bbe65c3c43f474a2872b8e5bce2634d4f18271b371d9fe67906436c4; size=733 bytes; filesystem_modified_at_utc=2026-08-18T05:59:56.312994+00:00
+- forecast_model.py: sha256=0fc9837d6e90f520fe9388614402d02ac22f47f6b436b06f03894ccea8b0cc2f; size=1038 bytes; filesystem_modified_at_utc=2026-08-18T05:59:56.312994+00:00
+- orion_dcf.py: sha256=9fc4a5b3e335225371cc8cc91b1ebf60d05c0cd3f72148f61abb53f54299ee14; size=8854 bytes; filesystem_modified_at_utc=2026-08-18T05:59:56.312994+00:00
+- valuation_model.py: sha256=cd264608f4e72d7c2d67c275467121f1828b9bdfef419c95354f6872d798c146; size=2613 bytes; filesystem_modified_at_utc=2026-08-18T05:59:56.314209+00:00
+- orion_dashboard.py: sha256=c7cf10c28e15edca7f77596ad3ad19a272ee70989e6be98dcc49ba2bbe882f65; size=22033 bytes; filesystem_modified_at_utc=2026-08-18T05:59:56.312994+00:00
+- orion_valuation_lab.py: sha256=c71b592ca1725175c69637e4ad2281c8f0606e9a5ff3820da240cd2da17d42bc; size=58117 bytes; filesystem_modified_at_utc=2026-08-18T05:59:56.312994+00:00
+
+VALIDATION AT PHASE 1.1
+-----------------------
+Pre-change pytest: 18 passed
+Post-control pytest: see docs/checkpoints/STATUS.md
+Marimo check: passed; container emitted only a read-only
+/root/.config discovery warning
+
+FULL PYTHON ENVIRONMENT (pip freeze)
+------------------------------------
+anyio==4.14.2
+click==8.4.2
+docutils==0.23
+et_xmlfile==2.0.0
+h11==0.16.0
+idna==3.19
+iniconfig==2.3.0
+itsdangerous==2.2.0
+jedi==0.19.2
+loro==1.13.2
+marimo==0.23.16
+Markdown==3.10.3
+msgspec==0.21.1
+narwhals==2.24.0
+numpy==2.5.2
+openpyxl==3.1.5
+packaging==26.3
+pandas==3.0.4
+parso==0.8.7
+plotly==6.8.0
+pluggy==1.6.0
+psutil==7.2.2
+Pygments==2.21.0
+pymdown-extensions==11.0.1
+pytest==9.1.1
+python-dateutil==2.9.0.post0
+python-multipart==0.0.32
+PyYAML==6.0.3
+pyzmq==27.1.0
+six==1.17.0
+starlette==1.6.0
+tomlkit==0.15.1
+typing_extensions==4.16.0
+uvicorn==0.52.3
+websockets==17.0.1
