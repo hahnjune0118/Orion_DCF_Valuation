@@ -162,4 +162,8 @@ def test_waterfall_figure_uses_expected_order_signs_and_unit(forecast_rows):
     assert trace.decreasing.marker.color == "#E07A5F"
     assert trace.totals.marker.color == "#3478B8"
     assert figure.layout.yaxis.title.text == "십억원"
+    d_and_a_peak = (
+        result["NOPAT"] + result["D&A"]
+    ) / 1_000
+    assert figure.layout.yaxis.range[1] > d_and_a_peak
     assert result == original
