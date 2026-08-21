@@ -32,6 +32,30 @@ SUPPORTED_FORMULA_STAGES = (
     "지분가치",
     "주당 내재가치",
 )
+CHALLENGE_ASSUMPTION_KEYS = (
+    "revenue_growth_adjustment",
+    "ebit_margin_adjustment",
+    "wacc_adjustment",
+    "terminal_growth_adjustment",
+)
+MANAGEMENT_ASSERTION_CASE = "경영진 주장"
+AUDITOR_PROFESSIONAL_JUDGMENT_CASE = "감사인의 전문가적 판단"
+AUDITOR_RANGE_LOWER_CASE = "감사인 범위 하단"
+AUDITOR_RANGE_UPPER_CASE = "감사인 범위 상단"
+DEFAULT_SENSITIVITY_WACC_OFFSETS = (
+    -0.010,
+    -0.005,
+    0.000,
+    0.005,
+    0.010,
+)
+DEFAULT_SENSITIVITY_GROWTH_OFFSETS = (
+    -0.0050,
+    -0.0025,
+    0.0000,
+    0.0025,
+    0.0050,
+)
 
 REQUIRED_FCFF_FIELDS = (
     "연도",
@@ -371,6 +395,21 @@ def build_fcff_waterfall_figure(
     text[0] = f"{displayed_amounts[0]:,.1f}"
     text[2] = f"{displayed_amounts[2]:,.1f}"
     text[6] = f"{displayed_amounts[6]:,.1f}"
+    cumulative_points = [displayed_amounts[0], displayed_amounts[2]]
+    running_value = displayed_amounts[2]
+    for effect in display_effects[3:6]:
+        running_value += effect
+        cumulative_points.append(running_value)
+    cumulative_points.append(displayed_amounts[6])
+    axis_minimum = min(0.0, min(cumulative_points))
+    axis_maximum = max(cumulative_points)
+    axis_span = max(axis_maximum - axis_minimum, 1.0)
+    axis_upper = axis_maximum + axis_span * 0.16
+    axis_lower = (
+        axis_minimum - axis_span * 0.08
+        if axis_minimum < 0
+        else 0.0
+    )
 
     figure = go.Figure(
         go.Waterfall(
@@ -436,6 +475,7 @@ def build_fcff_waterfall_figure(
     )
     figure.update_yaxes(
         title="십억원",
+        range=[axis_lower, axis_upper],
         gridcolor="#E9EEF3",
         zeroline=False,
         linecolor="#D9E2EC",
@@ -962,3 +1002,459 @@ def build_formula_explorer_insight(
         enterprise_value = _required_value(reconciled, "모델값", "formula_result")
         return base + f" 계속기업가치 현재가치 비중은 {terminal_pv / enterprise_value:.1%}입니다."
     return base
+
+
+def _validated_adjustments(
+    adjustments: Mapping[str, object],
+) -> dict[str, float]:
+    if not isinstance(adjustments, Mapping):
+        raise TypeError("Challenge 가정은 매핑이어야 합니다.")
+
+    missing = [
+        key for key in CHALLENGE_ASSUMPTION_KEYS if key not in adjustments
+    ]
+    if missing:
+        raise KeyError(
+            "Challenge 가정 누락: " + ", ".join(missing)
+        )
+
+    validated = {}
+    for key in CHALLENGE_ASSUMPTION_KEYS:
+        value = adjustments[key]
+        if isinstance(value, bool):
+            raise TypeError(f"{key}은(는) 숫자여야 합니다.")
+        try:
+            numeric_value = float(value)
+        except (TypeError, ValueError) as exc:
+            raise TypeError(f"{key}은(는) 숫자여야 합니다.") from exc
+        if not isfinite(numeric_value):
+            raise ValueError(f"{key}은(는) 유한한 숫자여야 합니다.")
+        validated[key] = numeric_value
+    return validated
+
+
+def _challenge_case_snapshot(
+    model: Mapping[str, object],
+    case_name: str,
+    adjustments: Mapping[str, object],
+    current_price: float,
+) -> dict[str, object]:
+    if not isinstance(model, Mapping):
+        raise TypeError("Case 모델은 매핑이어야 합니다.")
+
+    forecast_rows = model.get("전망")
+    if not isinstance(forecast_rows, Sequence) or isinstance(
+        forecast_rows, (str, bytes)
+    ):
+        raise TypeError("Case 모델의 전망은 행 시퀀스여야 합니다.")
+    if len(forecast_rows) < 2:
+        raise ValueError("매출 CAGR 계산에는 최소 2개 전망연도가 필요합니다.")
+
+    revenues = []
+    margins = []
+    for row in forecast_rows:
+        if not isinstance(row, Mapping):
+            raise TypeError("전망 데이터의 각 행은 매핑이어야 합니다.")
+        revenues.append(_required_value(row, "매출액", "Challenge 전망"))
+        margins.append(
+            _required_value(row, "영업이익률", "Challenge 전망")
+        )
+
+    if revenues[0] <= 0 or revenues[-1] <= 0:
+        raise ValueError("매출 CAGR 계산을 위한 매출액은 양수여야 합니다.")
+
+    wacc_data = _require_mapping(model.get("WACC"), "Case 모델['WACC']")
+    dcf_data = _require_mapping(model.get("DCF"), "Case 모델['DCF']")
+    equity_data = _require_mapping(
+        model.get("지분가치"),
+        "Case 모델['지분가치']",
+    )
+    per_share = _required_value(
+        equity_data,
+        "주당 내재가치",
+        "Case 지분가치",
+    )
+    price = float(current_price)
+    if not isfinite(price) or price <= 0:
+        raise ValueError("기준주가는 양의 유한한 숫자여야 합니다.")
+
+    return {
+        "Case": str(case_name),
+        "매출 CAGR": (
+            revenues[-1] / revenues[0]
+        ) ** (1 / (len(revenues) - 1)) - 1,
+        "평균 EBIT Margin": sum(margins) / len(margins),
+        "WACC": _required_value(wacc_data, "WACC", "Case WACC"),
+        "영구성장률": _required_value(
+            dcf_data,
+            "영구성장률",
+            "Case DCF",
+        ),
+        "기업가치": _required_value(
+            dcf_data,
+            "기업가치",
+            "Case DCF",
+        ),
+        "지분가치": _required_value(
+            equity_data,
+            "지분가치",
+            "Case 지분가치",
+        ),
+        "주당 내재가치": per_share,
+        "상승여력": per_share / price - 1,
+        "조정 가정": _validated_adjustments(adjustments),
+    }
+
+
+def prepare_challenge_case_comparison(
+    management_model: Mapping[str, object],
+    reviewer_model: Mapping[str, object],
+    reviewer_adjustments: Mapping[str, object],
+    current_price: float,
+) -> dict[str, object]:
+    """Compare management's assertion with the auditor's judgment case.
+
+    The function reads already-calculated models and never mutates them.  It
+    deliberately separates model production from reviewer judgment so the
+    dashboard can evidence both the asserted case and the challenged case.
+    """
+
+    management_adjustments = {
+        key: 0.0 for key in CHALLENGE_ASSUMPTION_KEYS
+    }
+    management = _challenge_case_snapshot(
+        management_model,
+        MANAGEMENT_ASSERTION_CASE,
+        management_adjustments,
+        current_price,
+    )
+    reviewer = _challenge_case_snapshot(
+        reviewer_model,
+        AUDITOR_PROFESSIONAL_JUDGMENT_CASE,
+        reviewer_adjustments,
+        current_price,
+    )
+
+    metric_names = (
+        "매출 CAGR",
+        "평균 EBIT Margin",
+        "WACC",
+        "영구성장률",
+        "기업가치",
+        "지분가치",
+        "주당 내재가치",
+        "상승여력",
+    )
+    deltas = {
+        metric: float(reviewer[metric]) - float(management[metric])
+        for metric in metric_names
+    }
+    value_gap_ratio = (
+        float(reviewer["주당 내재가치"])
+        / float(management["주당 내재가치"])
+        - 1
+    )
+
+    return {
+        "Cases": [management, reviewer],
+        MANAGEMENT_ASSERTION_CASE: management,
+        AUDITOR_PROFESSIONAL_JUDGMENT_CASE: reviewer,
+        "차이": deltas,
+        "주당가치 차이율": value_gap_ratio,
+        "검토상태": (
+            "CHALLENGED"
+            if abs(value_gap_ratio) >= 0.05
+            else "CORROBORATED"
+        ),
+    }
+
+
+def prepare_auditor_range_comparison(
+    management_model: Mapping[str, object],
+    auditor_lower_model: Mapping[str, object],
+    auditor_upper_model: Mapping[str, object],
+    lower_adjustments: Mapping[str, object],
+    upper_adjustments: Mapping[str, object],
+    current_price: float,
+) -> dict[str, object]:
+    """Compare management's assertion with an auditor-developed range.
+
+    The lower endpoint applies the assumptions that produce the lower value;
+    consequently its WACC adjustment must be greater than or equal to the
+    upper endpoint's WACC adjustment.  The other three adjustments follow
+    their ordinary numeric ordering.
+    """
+
+    validated_lower = _validated_adjustments(lower_adjustments)
+    validated_upper = _validated_adjustments(upper_adjustments)
+    increasing_keys = (
+        "revenue_growth_adjustment",
+        "ebit_margin_adjustment",
+        "terminal_growth_adjustment",
+    )
+    if any(
+        validated_lower[key] > validated_upper[key]
+        for key in increasing_keys
+    ):
+        raise ValueError("범위 하단 가정은 범위 상단 가정보다 클 수 없습니다.")
+    if (
+        validated_lower["wacc_adjustment"]
+        < validated_upper["wacc_adjustment"]
+    ):
+        raise ValueError(
+            "범위 하단의 WACC 조정은 범위 상단보다 작을 수 없습니다."
+        )
+
+    management_adjustments = {
+        key: 0.0 for key in CHALLENGE_ASSUMPTION_KEYS
+    }
+    management = _challenge_case_snapshot(
+        management_model,
+        MANAGEMENT_ASSERTION_CASE,
+        management_adjustments,
+        current_price,
+    )
+    lower = _challenge_case_snapshot(
+        auditor_lower_model,
+        AUDITOR_RANGE_LOWER_CASE,
+        validated_lower,
+        current_price,
+    )
+    upper = _challenge_case_snapshot(
+        auditor_upper_model,
+        AUDITOR_RANGE_UPPER_CASE,
+        validated_upper,
+        current_price,
+    )
+
+    lower_value = float(lower["주당 내재가치"])
+    upper_value = float(upper["주당 내재가치"])
+    if lower_value > upper_value:
+        raise ValueError(
+            "계산된 감사인 범위 하단은 범위 상단보다 클 수 없습니다."
+        )
+    midpoint = (lower_value + upper_value) / 2
+    width = upper_value - lower_value
+    management_value = float(management["주당 내재가치"])
+    includes_management = lower_value <= management_value <= upper_value
+    if management_value < lower_value:
+        nearest_range_value = lower_value
+        misstatement_direction = "과소"
+    elif management_value > upper_value:
+        nearest_range_value = upper_value
+        misstatement_direction = "과대"
+    else:
+        nearest_range_value = management_value
+        misstatement_direction = "범위 내"
+    misstatement_amount = abs(management_value - nearest_range_value)
+
+    return {
+        "Cases": [management, lower, upper],
+        MANAGEMENT_ASSERTION_CASE: management,
+        AUDITOR_RANGE_LOWER_CASE: lower,
+        AUDITOR_RANGE_UPPER_CASE: upper,
+        "감사인 범위 중앙값": midpoint,
+        "범위폭": width,
+        "범위폭 비율": width / midpoint if midpoint else 0.0,
+        "경영진 주장 포함 여부": includes_management,
+        "가장 가까운 범위 금액": nearest_range_value,
+        "왜곡표시 금액": misstatement_amount,
+        "왜곡표시 방향": misstatement_direction,
+        "검토상태": "WITHIN_RANGE" if includes_management else "OUTSIDE_RANGE",
+    }
+
+
+def prepare_challenge_sensitivity_data(
+    model: Mapping[str, object],
+    wacc_offsets: Sequence[float] = DEFAULT_SENSITIVITY_WACC_OFFSETS,
+    growth_offsets: Sequence[float] = DEFAULT_SENSITIVITY_GROWTH_OFFSETS,
+) -> dict[str, object]:
+    """Revalue one completed case over a WACC/g grid without reopening Excel."""
+
+    if not isinstance(model, Mapping):
+        raise TypeError("민감도 분석 모델은 매핑이어야 합니다.")
+
+    forecast_rows = model.get("전망")
+    if not isinstance(forecast_rows, Sequence) or isinstance(
+        forecast_rows, (str, bytes)
+    ) or not forecast_rows:
+        raise TypeError("민감도 분석 모델의 전망은 비어 있지 않은 행 시퀀스여야 합니다.")
+
+    fcff_forecast = []
+    for row in forecast_rows:
+        if not isinstance(row, Mapping):
+            raise TypeError("전망 데이터의 각 행은 매핑이어야 합니다.")
+        fcff_forecast.append(
+            _required_value(row, "FCFF", "민감도 전망")
+        )
+
+    wacc_data = _require_mapping(
+        model.get("WACC"),
+        "민감도 모델['WACC']",
+    )
+    dcf_data = _require_mapping(
+        model.get("DCF"),
+        "민감도 모델['DCF']",
+    )
+    equity_data = _require_mapping(
+        model.get("지분가치"),
+        "민감도 모델['지분가치']",
+    )
+    base_wacc = _required_value(wacc_data, "WACC", "민감도 WACC")
+    base_growth = _required_value(
+        dcf_data,
+        "영구성장률",
+        "민감도 DCF",
+    )
+    enterprise_value = _required_value(
+        dcf_data,
+        "기업가치",
+        "민감도 DCF",
+    )
+    equity_value = _required_value(
+        equity_data,
+        "지분가치",
+        "민감도 지분가치",
+    )
+    per_share_value = _required_value(
+        equity_data,
+        "주당 내재가치",
+        "민감도 지분가치",
+    )
+    if per_share_value <= 0:
+        raise ValueError("주당 내재가치는 양수여야 합니다.")
+
+    shares_million = equity_value / per_share_value
+    bridge_adjustment = equity_value - enterprise_value
+    validated_wacc_offsets = [float(value) for value in wacc_offsets]
+    validated_growth_offsets = [float(value) for value in growth_offsets]
+    wacc_grid = [base_wacc + value for value in validated_wacc_offsets]
+    growth_grid = [base_growth + value for value in validated_growth_offsets]
+
+    values = []
+    for growth_rate in growth_grid:
+        row_values = []
+        for wacc_rate in wacc_grid:
+            if wacc_rate <= growth_rate:
+                raise ValueError("민감도 분석에서는 WACC가 영구성장률보다 커야 합니다.")
+            discount_factors = [
+                1 / (1 + wacc_rate) ** period
+                for period in range(1, len(fcff_forecast) + 1)
+            ]
+            explicit_pv = sum(
+                fcff * factor
+                for fcff, factor in zip(
+                    fcff_forecast,
+                    discount_factors,
+                    strict=True,
+                )
+            )
+            terminal_value = (
+                fcff_forecast[-1]
+                * (1 + growth_rate)
+                / (wacc_rate - growth_rate)
+            )
+            revalued_enterprise = (
+                explicit_pv + terminal_value * discount_factors[-1]
+            )
+            revalued_equity = revalued_enterprise + bridge_adjustment
+            row_values.append(revalued_equity / shares_million)
+        values.append(row_values)
+
+    return {
+        "WACC": wacc_grid,
+        "영구성장률": growth_grid,
+        "WACC offsets": validated_wacc_offsets,
+        "성장률 offsets": validated_growth_offsets,
+        "주당 내재가치": values,
+        "기준 WACC index": validated_wacc_offsets.index(0.0),
+        "기준 성장률 index": validated_growth_offsets.index(0.0),
+        "기업가치-지분가치 조정": bridge_adjustment,
+        "유통주식수(백만주)": shares_million,
+    }
+
+
+def build_challenge_conclusion(
+    comparison: Mapping[str, object],
+) -> str:
+    if not isinstance(comparison, Mapping):
+        raise TypeError("Challenge 비교 결과는 매핑이어야 합니다.")
+
+    management = _require_mapping(
+        comparison.get(MANAGEMENT_ASSERTION_CASE),
+        f"Challenge 비교['{MANAGEMENT_ASSERTION_CASE}']",
+    )
+    reviewer = _require_mapping(
+        comparison.get(AUDITOR_PROFESSIONAL_JUDGMENT_CASE),
+        f"Challenge 비교['{AUDITOR_PROFESSIONAL_JUDGMENT_CASE}']",
+    )
+    adjustments = _require_mapping(
+        reviewer.get("조정 가정"),
+        f"{AUDITOR_PROFESSIONAL_JUDGMENT_CASE}['조정 가정']",
+    )
+    management_value = _required_value(
+        management,
+        "주당 내재가치",
+        MANAGEMENT_ASSERTION_CASE,
+    )
+    reviewer_value = _required_value(
+        reviewer,
+        "주당 내재가치",
+        AUDITOR_PROFESSIONAL_JUDGMENT_CASE,
+    )
+    gap = reviewer_value / management_value - 1
+
+    return (
+        f"{AUDITOR_PROFESSIONAL_JUDGMENT_CASE}에 따른 주당 내재가치는 "
+        f"{reviewer_value:,.0f}원으로, {MANAGEMENT_ASSERTION_CASE} "
+        f"{management_value:,.0f}원 대비 {gap:+.1%}입니다. "
+        "주요 가정 조정은 "
+        f"매출성장률 {float(adjustments['revenue_growth_adjustment']):+.1%}p, "
+        f"EBIT Margin {float(adjustments['ebit_margin_adjustment']):+.1%}p, "
+        f"WACC {float(adjustments['wacc_adjustment']):+.1%}p, "
+        f"영구성장률 {float(adjustments['terminal_growth_adjustment']):+.1%}p입니다. "
+        "본 결과는 감사의견이 아닌 가정 검토 시뮬레이션입니다."
+    )
+
+
+def build_auditor_range_conclusion(
+    comparison: Mapping[str, object],
+) -> str:
+    """Summarise the auditor-developed range without implying an audit opinion."""
+
+    if not isinstance(comparison, Mapping):
+        raise TypeError("감사인 범위 비교 결과는 매핑이어야 합니다.")
+    management = _require_mapping(
+        comparison.get(MANAGEMENT_ASSERTION_CASE),
+        f"범위 비교['{MANAGEMENT_ASSERTION_CASE}']",
+    )
+    lower = _require_mapping(
+        comparison.get(AUDITOR_RANGE_LOWER_CASE),
+        f"범위 비교['{AUDITOR_RANGE_LOWER_CASE}']",
+    )
+    upper = _require_mapping(
+        comparison.get(AUDITOR_RANGE_UPPER_CASE),
+        f"범위 비교['{AUDITOR_RANGE_UPPER_CASE}']",
+    )
+    management_value = _required_value(
+        management, "주당 내재가치", MANAGEMENT_ASSERTION_CASE
+    )
+    lower_value = _required_value(
+        lower, "주당 내재가치", AUDITOR_RANGE_LOWER_CASE
+    )
+    upper_value = _required_value(
+        upper, "주당 내재가치", AUDITOR_RANGE_UPPER_CASE
+    )
+    midpoint = float(comparison.get("감사인 범위 중앙값", 0.0))
+    position = (
+        "감사인 범위 안에 포함됩니다"
+        if bool(comparison.get("경영진 주장 포함 여부"))
+        else "감사인 범위 밖에 있습니다"
+    )
+    return (
+        f"감사인의 전문가적 판단에 따른 주당 내재가치 범위는 "
+        f"{lower_value:,.0f}원~{upper_value:,.0f}원이며 중앙값은 "
+        f"{midpoint:,.0f}원입니다. 경영진 주장 {management_value:,.0f}원은 "
+        f"{position}. 본 범위는 충분하고 적합한 감사증거의 확보 여부를 "
+        "전제로 한 가정 검토 시뮬레이션이며 감사의견이 아닙니다."
+    )
