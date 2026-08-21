@@ -14,11 +14,14 @@ def _():
     from html import escape
     from pathlib import Path
     from dashboard_components import (
+        build_auditor_range_conclusion,
         build_fcff_waterfall_figure,
         build_fcff_waterfall_insight,
         build_formula_explorer_insight,
         build_valuation_formula_catalog,
         calculate_fcff_waterfall_kpis,
+        prepare_auditor_range_comparison,
+        prepare_challenge_sensitivity_data,
         prepare_fcff_waterfall_data,
         prepare_formula_explorer_data,
         reconcile_formula_result,
@@ -28,6 +31,7 @@ def _():
 
     return (
         Path,
+        build_auditor_range_conclusion,
         build_fcff_waterfall_figure,
         build_fcff_waterfall_insight,
         build_formula_explorer_insight,
@@ -37,6 +41,8 @@ def _():
         go,
         mo,
         pd,
+        prepare_auditor_range_comparison,
+        prepare_challenge_sensitivity_data,
         prepare_fcff_waterfall_data,
         prepare_formula_explorer_data,
         reconcile_formula_result,
@@ -79,7 +85,7 @@ def _(Path, pd, run_orion_dcf):
 
 @app.cell
 def _(model):
-    current_price = 104_330
+    current_price = 125_000
 
     value_per_share = float(
         model["지분가치"]["주당 내재가치"]
@@ -139,8 +145,51 @@ def _(mo):
                 background: {COLORS["navy"]};
                 color: white;
                 border-radius: 12px;
-                padding: 28px 32px 26px 32px;
+                padding: 18px 24px 17px 24px;
                 margin-bottom: 4px;
+            }}
+
+            .company-identity {{
+                display: flex;
+                align-items: center;
+                gap: 9px;
+                flex-wrap: wrap;
+                margin-bottom: 9px;
+            }}
+
+            .company-name {{
+                color: #FFFFFF;
+                font-size: 15px;
+                font-weight: 780;
+                letter-spacing: -0.01em;
+            }}
+
+            .ticker-code {{
+                display: inline-flex;
+                align-items: center;
+                min-height: 21px;
+                padding: 2px 8px;
+                border: 1px solid #4C7292;
+                border-radius: 999px;
+                background: #1D3D5C;
+                color: #E7F0F8;
+                font-size: 11px;
+                font-weight: 760;
+                letter-spacing: 0.04em;
+            }}
+
+            .market-label {{
+                display: inline-flex;
+                align-items: center;
+                min-height: 21px;
+                padding: 2px 8px;
+                border: 1px solid #4C7292;
+                border-radius: 999px;
+                background: #EAF2F8;
+                color: #1F5A94;
+                font-size: 10px;
+                font-weight: 800;
+                letter-spacing: 0.03em;
             }}
 
             .pitch-eyebrow {{
@@ -158,7 +207,54 @@ def _(mo):
                 font-weight: 750;
                 line-height: 1.28;
                 margin: 0;
-                max-width: 1080px;
+                max-width: 1500px;
+            }}
+
+            .dynamic-value-chip {{
+                display: inline-flex;
+                align-items: center;
+                min-height: 34px;
+                margin: 2px 3px;
+                padding: 2px 10px;
+                border: 1px solid #8FB4D2;
+                border-radius: 7px;
+                background: #F7FBFF;
+                color: {COLORS["navy"]};
+                box-shadow:
+                    inset 0 0 0 1px rgba(31, 90, 148, 0.08),
+                    0 2px 6px rgba(0, 0, 0, 0.16);
+                font-variant-numeric: tabular-nums;
+                font-weight: 820;
+                line-height: 1;
+                vertical-align: baseline;
+                white-space: nowrap;
+            }}
+
+            .dynamic-value-chip::before {{
+                content: "";
+                width: 6px;
+                height: 6px;
+                margin-right: 7px;
+                border-radius: 50%;
+                background: {COLORS["teal"]};
+                box-shadow: 0 0 0 3px rgba(36, 123, 123, 0.13);
+            }}
+
+            .pitch-inline-meta {{
+                display: inline-block;
+                color: #BFD3E5;
+                font-size: 12px;
+                font-weight: 650;
+                line-height: 1.35;
+                vertical-align: middle;
+                white-space: nowrap;
+            }}
+
+            .market-value-group {{
+                display: inline-flex;
+                align-items: baseline;
+                gap: 3px;
+                white-space: nowrap;
             }}
 
             .pitch-subtitle {{
@@ -184,8 +280,8 @@ def _(mo):
                 background: {COLORS["surface"]};
                 border: 1px solid {COLORS["line"]};
                 border-radius: 10px;
-                padding: 17px 18px 15px 18px;
-                min-height: 114px;
+                padding: 12px 15px;
+                min-height: 88px;
                 box-shadow: 0 2px 8px rgba(16, 42, 67, 0.06);
             }}
 
@@ -233,7 +329,7 @@ def _(mo):
 
             .fcff-panel-caption {{
                 color: {COLORS["muted"]};
-                font-size: 11px;
+                font-size: 12px;
                 line-height: 1.45;
                 margin-bottom: 14px;
             }}
@@ -242,7 +338,7 @@ def _(mo):
                 display: grid;
                 grid-template-columns: repeat(2, minmax(0, 1fr));
                 gap: 8px;
-                margin: 14px 0;
+                margin: 9px 0;
             }}
 
             .fcff-mini-kpi {{
@@ -280,7 +376,7 @@ def _(mo):
                 align-items: center;
                 gap: 7px;
                 flex-wrap: wrap;
-                margin: 8px 0 14px 0;
+                margin: 6px 0 8px 0;
             }}
 
             .formula-node {{
@@ -325,8 +421,8 @@ def _(mo):
                 background: {COLORS["surface"]};
                 border: 1px solid {COLORS["line"]};
                 border-radius: 10px;
-                padding: 18px;
-                min-height: 420px;
+                padding: 12px;
+                min-height: 0;
                 box-shadow: 0 2px 8px rgba(16, 42, 67, 0.05);
             }}
 
@@ -342,8 +438,8 @@ def _(mo):
             .formula-copy {{
                 color: {COLORS["ink"]};
                 font-size: 12px;
-                line-height: 1.6;
-                margin-bottom: 14px;
+                line-height: 1.45;
+                margin-bottom: 8px;
             }}
 
             .formula-equation {{
@@ -365,14 +461,41 @@ def _(mo):
             .formula-kpi-grid {{
                 display: grid;
                 grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 6px;
+                margin: 8px 0;
+            }}
+
+            .formula-input-grid {{
+                grid-template-columns: repeat(6, minmax(0, 1fr));
+            }}
+
+            .formula-status-inline {{
+                display: flex;
+                align-items: center;
                 gap: 8px;
-                margin: 12px 0;
+                min-width: 0;
+            }}
+
+            .formula-insight-compact {{
+                flex: 1;
+                min-width: 0;
+                border-left: 3px solid {COLORS["gold"]};
+                background: {COLORS["open_gold"]};
+                color: {COLORS["ink"]};
+                border-radius: 0 7px 7px 0;
+                padding: 7px 9px;
+                font-size: 11px;
+                line-height: 1.35;
+            }}
+
+            .katex-display {{
+                margin: 0.25em 0 !important;
             }}
 
             .formula-kpi {{
                 background: {COLORS["background"]};
                 border-radius: 8px;
-                padding: 10px 11px;
+                padding: 8px 9px;
                 border-top: 3px solid {COLORS["blue"]};
             }}
 
@@ -449,9 +572,269 @@ def _(mo):
                 padding: 6px 7px;
             }}
 
+            .chapter-intro {{
+                background: {COLORS["surface"]};
+                border-left: 4px solid {COLORS["blue"]};
+                border-radius: 0 10px 10px 0;
+                padding: 9px 14px;
+                margin-bottom: 4px;
+            }}
+
+            .chapter-kicker {{
+                color: {COLORS["blue"]};
+                font-size: 11px;
+                font-weight: 800;
+                letter-spacing: 0.10em;
+                text-transform: uppercase;
+                margin-bottom: 4px;
+            }}
+
+            .chapter-title {{
+                color: {COLORS["navy"]};
+                font-size: 20px;
+                font-weight: 780;
+                line-height: 1.3;
+            }}
+
+            .chapter-copy {{
+                color: {COLORS["muted"]};
+                font-size: 12px;
+                line-height: 1.55;
+                margin-top: 5px;
+            }}
+
+            .challenge-panel {{
+                background: {COLORS["surface"]};
+                border: 1px solid {COLORS["line"]};
+                border-radius: 10px;
+                padding: 12px;
+                box-shadow: 0 2px 8px rgba(16, 42, 67, 0.05);
+            }}
+
+            .challenge-panel-head {{
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 12px;
+                margin-bottom: 5px;
+            }}
+
+            .challenge-panel-caption {{
+                color: {COLORS["muted"]};
+                font-size: 13px;
+                line-height: 1.45;
+                margin-top: 3px;
+            }}
+
+            .challenge-case-grid {{
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+                margin: 12px 0;
+            }}
+
+            .challenge-case {{
+                background: {COLORS["background"]};
+                border-radius: 9px;
+                padding: 13px;
+                border-top: 3px solid {COLORS["blue"]};
+            }}
+
+            .challenge-case-review {{
+                border-top-color: {COLORS["gold"]};
+            }}
+
+            .challenge-case-name {{
+                color: {COLORS["muted"]};
+                font-size: 13px;
+                font-weight: 750;
+                margin-bottom: 4px;
+            }}
+
+            .challenge-case-value {{
+                color: {COLORS["navy"]};
+                font-size: 22px;
+                font-weight: 800;
+            }}
+
+            .challenge-case-meta {{
+                color: {COLORS["muted"]};
+                font-size: 13px;
+                line-height: 1.5;
+                margin-top: 5px;
+            }}
+
+            .challenge-status {{
+                display: inline-block;
+                border-radius: 999px;
+                background: {COLORS["open_gold"]};
+                color: #8A5A10;
+                border: 1px solid #E4C27B;
+                padding: 5px 10px;
+                font-size: 13px;
+                font-weight: 800;
+                letter-spacing: 0.04em;
+            }}
+
+            .challenge-conclusion {{
+                border-left: 3px solid {COLORS["gold"]};
+                background: {COLORS["open_gold"]};
+                color: {COLORS["ink"]};
+                border-radius: 0 8px 8px 0;
+                padding: 12px 13px;
+                font-size: 13px;
+                line-height: 1.6;
+                margin-top: 12px;
+            }}
+
+            .audit-standard {{
+                background: {COLORS["open_blue"]};
+                border: 1px solid #C9DCEB;
+                border-radius: 8px;
+                padding: 8px 10px;
+                margin-top: 7px;
+            }}
+
+            .audit-standard-ref {{
+                color: {COLORS["blue"]};
+                font-size: 13px;
+                font-weight: 800;
+                letter-spacing: 0.04em;
+                margin-bottom: 4px;
+            }}
+
+            .audit-standard-quote {{
+                color: {COLORS["ink"]};
+                font-size: 13px;
+                line-height: 1.55;
+                margin: 0;
+            }}
+
+            .audit-standard-source {{
+                color: {COLORS["blue"]};
+                font-size: 13px;
+                font-weight: 700;
+                text-decoration: none;
+                white-space: nowrap;
+            }}
+
+            .audit-standard-source:hover {{
+                text-decoration: underline;
+            }}
+
+            .challenge-table {{
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 13px;
+                margin-top: 12px;
+            }}
+
+            .range-control-label {{
+                color: {COLORS["navy"]};
+                font-size: 13px;
+                font-weight: 800;
+                margin: 5px 0 2px;
+            }}
+
+            .audit-standard-grid {{
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+                margin-top: 10px;
+            }}
+
+            .audit-standard-grid .audit-standard {{
+                margin-top: 0;
+            }}
+
+            .standard-inline {{
+                border-left: 3px solid {COLORS["blue"]};
+                background: {COLORS["open_blue"]};
+                color: {COLORS["ink"]};
+                border-radius: 0 7px 7px 0;
+                padding: 7px 10px;
+                font-size: 12px;
+                line-height: 1.45;
+            }}
+
+            .standard-inline strong {{
+                color: {COLORS["blue"]};
+            }}
+
+            .misstatement-card {{
+                display: grid;
+                grid-template-columns: 1fr auto;
+                align-items: center;
+                gap: 12px;
+                margin-top: 8px;
+                padding: 9px 11px;
+                border: 1px solid #E4C27B;
+                border-radius: 8px;
+                background: {COLORS["open_gold"]};
+            }}
+
+            .misstatement-label {{
+                color: #8A5A10;
+                font-size: 12px;
+                font-weight: 800;
+            }}
+
+            .misstatement-value {{
+                color: {COLORS["navy"]};
+                font-size: 20px;
+                font-weight: 820;
+                font-variant-numeric: tabular-nums;
+                white-space: nowrap;
+            }}
+
+            .challenge-table th,
+            .challenge-table td {{
+                padding: 7px 8px;
+                border-bottom: 1px solid #E9EEF3;
+                text-align: right;
+            }}
+
+            .challenge-table th {{
+                color: {COLORS["muted"]};
+                font-weight: 750;
+            }}
+
+            .challenge-table th:first-child,
+            .challenge-table td:first-child {{
+                text-align: left;
+            }}
+
             @media (max-width: 900px) {{
-                .formula-kpi-grid {{
+                .formula-kpi-grid,
+                .formula-input-grid {{
                     grid-template-columns: repeat(2, minmax(0, 1fr));
+                }}
+
+                .pitch-header {{
+                    padding: 22px 20px;
+                }}
+
+                .pitch-title {{
+                    font-size: 22px;
+                }}
+            }}
+
+            @media (max-width: 640px) {{
+                .formula-kpi-grid,
+                .challenge-case-grid {{
+                    grid-template-columns: 1fr;
+                }}
+
+                .chapter-title {{
+                    font-size: 18px;
+                }}
+
+                .challenge-panel-head {{
+                    display: block;
+                }}
+
+                .challenge-status {{
+                    margin-top: 8px;
                 }}
             }}
         </style>
@@ -477,18 +860,26 @@ def _(mo):
 
 
 @app.cell
-def _(mo, upside, value_per_share):
+def _(current_price, mo, upside, value_per_share):
     dashboard_header = mo.md(
         f"""
         <div class="pitch-header">
+            <div class="company-identity">
+                <span class="company-name">주식회사 오리온</span>
+                <span class="ticker-code">271560</span>
+                <span class="market-label">코스피</span>
+            </div>
             <div class="pitch-eyebrow">
-                ORION · DCF VALUATION · EXECUTIVE VIEW
+                DCF VALUATION · EXECUTIVE VIEW
             </div>
 
             <div class="pitch-title">
-                기준 시나리오상 주당 내재가치는
-                {value_per_share:,.0f}원으로,
-                기준주가 대비 {upside:.1%}의 상승여력을 시사
+                Valuation 시나리오상 주당 내재가치는
+                <span class="dynamic-value-chip" title="모델 계산값">{value_per_share:,.0f}</span>원으로
+                주식 시장가치
+                <span class="market-value-group"><span class="dynamic-value-chip" title="시장 기준값">{current_price:,.0f}</span>원<span class="pitch-inline-meta">(오리온 271560; 2026.08.21 기준)</span></span>
+                대비 <span class="dynamic-value-chip" title="모델 계산값">{upside:.1%}</span>의
+                상승여력을 시사합니다.
             </div>
 
             <div class="pitch-subtitle">
@@ -509,29 +900,14 @@ def _(mo, upside, value_per_share):
 @app.cell
 def _(
     COLORS,
-    current_price,
     enterprise_value,
     equity_value,
     kpi_card,
     mo,
-    upside,
-    value_per_share,
     wacc,
 ):
     kpi_strip = mo.hstack(
         [
-            kpi_card(
-                "주당 내재가치",
-                f"{value_per_share:,.0f}원",
-                "기준 시나리오",
-                COLORS["blue"],
-            ),
-            kpi_card(
-                "상승여력",
-                f"{upside:.1%}",
-                f"기준주가 {current_price:,.0f}원 대비",
-                COLORS["gold"],
-            ),
             kpi_card(
                 "기업가치",
                 f"{enterprise_value / 1_000_000:.2f}조원",
@@ -558,10 +934,9 @@ def _(
 
 
 @app.cell
-def _(dashboard_css, dashboard_header, kpi_strip, mo):
+def _(dashboard_header, kpi_strip, mo):
     executive_top = mo.vstack(
         [
-            dashboard_css,
             dashboard_header,
             kpi_strip,
         ],
@@ -619,66 +994,9 @@ def _():
 
 
 @app.cell
-def _(excel_path, run_orion_dcf, wacc):
-    base_terminal_growth = 0.02
-
-    wacc_grid = sorted(
-        {
-            0.085,
-            0.090,
-            round(wacc, 6),
-            0.100,
-            0.105,
-        }
-    )
-
-    growth_grid = [
-        0.010,
-        0.015,
-        0.020,
-        0.025,
-        0.030,
-    ]
-
-    sensitivity_values = []
-
-    for growth_rate in growth_grid:
-        sensitivity_row = []
-
-        for wacc_rate in wacc_grid:
-            sensitivity_model = run_orion_dcf(
-                excel_path,
-                wacc_adjustment=wacc_rate - wacc,
-                terminal_growth_adjustment=(
-                    growth_rate - base_terminal_growth
-                ),
-            )
-
-            sensitivity_row.append(
-                sensitivity_model["지분가치"]["주당 내재가치"]
-                / 1_000
-            )
-
-        sensitivity_values.append(sensitivity_row)
-
-    sensitivity_text = []
-
-    for row_index, growth_rate in enumerate(growth_grid):
-        text_row = []
-
-        for column_index, wacc_rate in enumerate(wacc_grid):
-            value = sensitivity_values[row_index][column_index]
-
-            if (
-                abs(wacc_rate - wacc) < 0.00001
-                and abs(growth_rate - base_terminal_growth) < 0.00001
-            ):
-                text_row.append(f"● {value:,.0f}")
-            else:
-                text_row.append(f"{value:,.0f}")
-
-        sensitivity_text.append(text_row)
-    return growth_grid, sensitivity_text, sensitivity_values, wacc_grid
+def _(model, prepare_challenge_sensitivity_data):
+    management_sensitivity = prepare_challenge_sensitivity_data(model)
+    return (management_sensitivity,)
 
 
 @app.cell
@@ -686,17 +1004,38 @@ def _(
     COLORS,
     apply_chart_style,
     go,
-    growth_grid,
-    sensitivity_text,
-    sensitivity_values,
-    wacc_grid,
+    management_sensitivity,
 ):
+    _management_values = [
+        [value / 1_000 for value in row]
+        for row in management_sensitivity["주당 내재가치"]
+    ]
+    _management_text = []
+    for _row_index, _row in enumerate(_management_values):
+        _text_row = []
+        for _column_index, _value in enumerate(_row):
+            if (
+                _row_index == management_sensitivity["기준 성장률 index"]
+                and _column_index
+                == management_sensitivity["기준 WACC index"]
+            ):
+                _text_row.append(f"● {_value:,.0f}")
+            else:
+                _text_row.append(f"{_value:,.0f}")
+        _management_text.append(_text_row)
+
     sensitivity_fig = go.Figure(
         data=go.Heatmap(
-            z=sensitivity_values,
-            x=[f"{rate:.2%}" for rate in wacc_grid],
-            y=[f"{rate:.1%}" for rate in growth_grid],
-            text=sensitivity_text,
+            z=_management_values,
+            x=[
+                f"{rate:.2%}"
+                for rate in management_sensitivity["WACC"]
+            ],
+            y=[
+                f"{rate:.2%}"
+                for rate in management_sensitivity["영구성장률"]
+            ],
+            text=_management_text,
             texttemplate="%{text}",
             textfont=dict(size=12),
             colorscale=[
@@ -721,8 +1060,8 @@ def _(
 
     sensitivity_fig.update_layout(
         title=(
-            "<b>WACC 및 영구성장률 민감도</b>"
-            "<br><sup>주당 내재가치, 천원 · ● 기준 시나리오</sup>"
+            "<b>경영진 주장 민감도</b>"
+            "<br><sup>WACC × 영구성장률 · 주당 내재가치, 천원 · ● 기준</sup>"
         )
     )
 
@@ -737,7 +1076,7 @@ def _(
 
     sensitivity_fig = apply_chart_style(
         sensitivity_fig,
-        height=390,
+        height=255,
     )
     return (sensitivity_fig,)
 
@@ -846,9 +1185,484 @@ def _(COLORS, apply_chart_style, current_price, go, scenario_df):
 
     scenario_fig = apply_chart_style(
         scenario_fig,
-        height=390,
+        height=350,
     )
     return (scenario_fig,)
+
+
+@app.cell
+def _(mo):
+    auditor_lower_revenue_growth = mo.ui.slider(
+        start=-3.0,
+        stop=0.0,
+        step=0.25,
+        value=-1.5,
+        label="범위 하단 (%p)",
+        show_value=False,
+        include_input=True,
+        debounce=True,
+        full_width=True,
+    )
+    auditor_upper_revenue_growth = mo.ui.slider(
+        start=-3.0,
+        stop=0.0,
+        step=0.25,
+        value=-0.5,
+        label="범위 상단 (%p)",
+        show_value=False,
+        include_input=True,
+        debounce=True,
+        full_width=True,
+    )
+    auditor_lower_ebit_margin = mo.ui.slider(
+        start=-3.0,
+        stop=1.0,
+        step=0.25,
+        value=-1.0,
+        label="범위 하단 (%p)",
+        show_value=False,
+        include_input=True,
+        debounce=True,
+        full_width=True,
+    )
+    auditor_upper_ebit_margin = mo.ui.slider(
+        start=-3.0,
+        stop=1.0,
+        step=0.25,
+        value=-0.25,
+        label="범위 상단 (%p)",
+        show_value=False,
+        include_input=True,
+        debounce=True,
+        full_width=True,
+    )
+    auditor_lower_wacc = mo.ui.slider(
+        start=0.0,
+        stop=2.0,
+        step=0.10,
+        value=1.0,
+        label="범위 하단 가치용 (%p)",
+        show_value=False,
+        include_input=True,
+        debounce=True,
+        full_width=True,
+    )
+    auditor_upper_wacc = mo.ui.slider(
+        start=0.0,
+        stop=2.0,
+        step=0.10,
+        value=0.5,
+        label="범위 상단 가치용 (%p)",
+        show_value=False,
+        include_input=True,
+        debounce=True,
+        full_width=True,
+    )
+    auditor_lower_terminal_growth = mo.ui.slider(
+        start=-1.5,
+        stop=0.0,
+        step=0.25,
+        value=-0.5,
+        label="범위 하단 (%p)",
+        show_value=False,
+        include_input=True,
+        debounce=True,
+        full_width=True,
+    )
+    auditor_upper_terminal_growth = mo.ui.slider(
+        start=-1.5,
+        stop=0.0,
+        step=0.25,
+        value=-0.25,
+        label="범위 상단 (%p)",
+        show_value=False,
+        include_input=True,
+        debounce=True,
+        full_width=True,
+    )
+    return (
+        auditor_lower_ebit_margin,
+        auditor_lower_revenue_growth,
+        auditor_lower_terminal_growth,
+        auditor_lower_wacc,
+        auditor_upper_ebit_margin,
+        auditor_upper_revenue_growth,
+        auditor_upper_terminal_growth,
+        auditor_upper_wacc,
+    )
+
+
+@app.cell
+def _(
+    auditor_lower_ebit_margin,
+    auditor_lower_revenue_growth,
+    auditor_lower_terminal_growth,
+    auditor_lower_wacc,
+    auditor_upper_ebit_margin,
+    auditor_upper_revenue_growth,
+    auditor_upper_terminal_growth,
+    auditor_upper_wacc,
+    build_auditor_range_conclusion,
+    current_price,
+    excel_path,
+    model,
+    prepare_auditor_range_comparison,
+    prepare_challenge_sensitivity_data,
+    run_orion_dcf,
+):
+    auditor_lower_adjustments = {
+        "revenue_growth_adjustment": auditor_lower_revenue_growth.value / 100,
+        "ebit_margin_adjustment": auditor_lower_ebit_margin.value / 100,
+        "wacc_adjustment": auditor_lower_wacc.value / 100,
+        "terminal_growth_adjustment": auditor_lower_terminal_growth.value / 100,
+    }
+    auditor_upper_adjustments = {
+        "revenue_growth_adjustment": auditor_upper_revenue_growth.value / 100,
+        "ebit_margin_adjustment": auditor_upper_ebit_margin.value / 100,
+        "wacc_adjustment": auditor_upper_wacc.value / 100,
+        "terminal_growth_adjustment": auditor_upper_terminal_growth.value / 100,
+    }
+    auditor_lower_model = run_orion_dcf(
+        excel_path,
+        **auditor_lower_adjustments,
+    )
+    auditor_upper_model = run_orion_dcf(
+        excel_path,
+        **auditor_upper_adjustments,
+    )
+    auditor_range_comparison = prepare_auditor_range_comparison(
+        model,
+        auditor_lower_model,
+        auditor_upper_model,
+        auditor_lower_adjustments,
+        auditor_upper_adjustments,
+        current_price,
+    )
+    auditor_range_conclusion = build_auditor_range_conclusion(
+        auditor_range_comparison
+    )
+    auditor_lower_sensitivity = prepare_challenge_sensitivity_data(
+        auditor_lower_model
+    )
+    auditor_upper_sensitivity = prepare_challenge_sensitivity_data(
+        auditor_upper_model
+    )
+    return (
+        auditor_lower_adjustments,
+        auditor_lower_model,
+        auditor_lower_sensitivity,
+        auditor_range_comparison,
+        auditor_range_conclusion,
+        auditor_upper_adjustments,
+        auditor_upper_model,
+        auditor_upper_sensitivity,
+    )
+
+
+@app.cell
+def _(
+    COLORS,
+    apply_chart_style,
+    auditor_lower_sensitivity,
+    auditor_upper_sensitivity,
+    go,
+):
+    _lower_values = [
+        [value / 1_000 for value in row]
+        for row in auditor_lower_sensitivity["주당 내재가치"]
+    ]
+    _upper_values = [
+        [value / 1_000 for value in row]
+        for row in auditor_upper_sensitivity["주당 내재가치"]
+    ]
+    _midpoint_values = [
+        [
+            (lower_value + upper_value) / 2
+            for lower_value, upper_value in zip(
+                lower_row, upper_row, strict=True
+            )
+        ]
+        for lower_row, upper_row in zip(
+            _lower_values, _upper_values, strict=True
+        )
+    ]
+    _range_text = []
+    for _row_index, (_lower_row, _upper_row) in enumerate(
+        zip(_lower_values, _upper_values, strict=True)
+    ):
+        _text_row = []
+        for _column_index, (_lower_value, _upper_value) in enumerate(
+            zip(_lower_row, _upper_row, strict=True)
+        ):
+            _range_label = f"{_lower_value:,.0f}–{_upper_value:,.0f}"
+            if (
+                _row_index
+                == auditor_lower_sensitivity["기준 성장률 index"]
+                and _column_index
+                == auditor_lower_sensitivity["기준 WACC index"]
+            ):
+                _text_row.append(f"● {_range_label}")
+            else:
+                _text_row.append(_range_label)
+        _range_text.append(_text_row)
+
+    auditor_range_sensitivity_fig = go.Figure(
+        data=go.Heatmap(
+            z=_midpoint_values,
+            x=[
+                f"{offset:+.2%}p"
+                for offset in auditor_lower_sensitivity["WACC offsets"]
+            ],
+            y=[
+                f"{offset:+.2%}p"
+                for offset in auditor_lower_sensitivity["성장률 offsets"]
+            ],
+            text=_range_text,
+            texttemplate="%{text}",
+            textfont=dict(size=12),
+            colorscale=[
+                [0.00, "#FBF4E6"],
+                [0.45, "#E4C27B"],
+                [1.00, COLORS["gold"]],
+            ],
+            colorbar=dict(title="중앙값, 천원", thickness=12),
+            xgap=2,
+            ygap=2,
+            hovertemplate=(
+                "WACC 변동 %{x}<br>"
+                "영구성장률 변동 %{y}<br>"
+                "범위 중앙값 %{z:,.0f}천원"
+                "<extra></extra>"
+            ),
+        )
+    )
+    auditor_range_sensitivity_fig.update_layout(
+        title=(
+            "<b>감사인 범위추정치 민감도</b>"
+            "<br><sup>셀: 하단–상단, 천원 · 색상: 중앙값 · ● 기준</sup>"
+        )
+    )
+    auditor_range_sensitivity_fig.update_xaxes(
+        title="WACC 변동", side="top"
+    )
+    auditor_range_sensitivity_fig.update_yaxes(title="영구성장률 변동")
+    auditor_range_sensitivity_fig = apply_chart_style(
+        auditor_range_sensitivity_fig,
+        height=255,
+    )
+    return (auditor_range_sensitivity_fig,)
+
+
+@app.cell
+def _(
+    COLORS,
+    auditor_lower_ebit_margin,
+    auditor_lower_revenue_growth,
+    auditor_lower_terminal_growth,
+    auditor_lower_wacc,
+    auditor_range_comparison,
+    auditor_range_conclusion,
+    auditor_upper_ebit_margin,
+    auditor_upper_revenue_growth,
+    auditor_upper_terminal_growth,
+    auditor_upper_wacc,
+    escape,
+    mo,
+):
+    _management = auditor_range_comparison["경영진 주장"]
+    _lower = auditor_range_comparison["감사인 범위 하단"]
+    _upper = auditor_range_comparison["감사인 범위 상단"]
+    _midpoint = auditor_range_comparison["감사인 범위 중앙값"]
+    _misstatement = auditor_range_comparison["왜곡표시 금액"]
+    _misstatement_direction = auditor_range_comparison["왜곡표시 방향"]
+    _nearest_range_value = auditor_range_comparison["가장 가까운 범위 금액"]
+    _status_label = {
+        "OUTSIDE_RANGE": "경영진 주장 범위 밖",
+        "WITHIN_RANGE": "경영진 주장 범위 내",
+    }.get(
+        auditor_range_comparison["검토상태"],
+        auditor_range_comparison["검토상태"],
+    )
+
+    challenge_controls = mo.vstack(
+        [
+            mo.md(
+                """
+                <div class="fcff-panel-title">감사인 판단 범위 조정</div>
+                <div class="fcff-panel-caption">
+                    네 가지 핵심 가정의 하단·상단을 설정합니다.
+                    Slider 옆 입력란에 %p 값을 직접 입력할 수 있습니다.
+                </div>
+                """
+            ),
+            mo.vstack(
+                [
+                    mo.md('<div class="range-control-label">매출성장률 조정 (%p)</div>'),
+                    mo.hstack(
+                        [auditor_lower_revenue_growth, auditor_upper_revenue_growth],
+                        widths=[1, 1], gap=0.8, wrap=False,
+                    ),
+                    mo.md('<div class="range-control-label">EBIT Margin 조정 (%p)</div>'),
+                    mo.hstack(
+                        [auditor_lower_ebit_margin, auditor_upper_ebit_margin],
+                        widths=[1, 1], gap=0.8, wrap=False,
+                    ),
+                    mo.md('<div class="range-control-label">WACC 조정 (%p)</div>'),
+                    mo.hstack(
+                        [auditor_lower_wacc, auditor_upper_wacc],
+                        widths=[1, 1], gap=0.8, wrap=False,
+                    ),
+                    mo.md('<div class="range-control-label">영구성장률 조정 (%p)</div>'),
+                    mo.hstack(
+                        [auditor_lower_terminal_growth, auditor_upper_terminal_growth],
+                        widths=[1, 1], gap=0.8, wrap=False,
+                    ),
+                ],
+                gap=0.45,
+            ),
+            mo.md(
+                """
+                <div class="standard-inline">
+                    <strong>감사기준서 540 · A121</strong> — 감사인은 경영진의
+                    모형에 대체 가정·데이터를 적용하거나, 감사인 자신의 방법·가정·데이터로
+                    점추정치 또는 범위를 도출할 수 있습니다.
+                </div>
+                """
+            ),
+        ],
+        gap=0.7,
+    ).style(
+        {
+            "background": COLORS["surface"],
+            "border": f"1px solid {COLORS['line']}",
+            "border-radius": "10px",
+            "padding": "12px",
+            "box-shadow": "0 2px 8px rgba(16, 42, 67, 0.05)",
+        }
+    )
+
+    _comparison_rows = [
+        (
+            "매출 CAGR",
+            f"{_management['매출 CAGR']:.2%}",
+            f"{_lower['매출 CAGR']:.2%}",
+            f"{_upper['매출 CAGR']:.2%}",
+        ),
+        (
+            "평균 EBIT Margin",
+            f"{_management['평균 EBIT Margin']:.2%}",
+            f"{_lower['평균 EBIT Margin']:.2%}",
+            f"{_upper['평균 EBIT Margin']:.2%}",
+        ),
+        (
+            "WACC",
+            f"{_management['WACC']:.2%}",
+            f"{_lower['WACC']:.2%}",
+            f"{_upper['WACC']:.2%}",
+        ),
+        (
+            "영구성장률",
+            f"{_management['영구성장률']:.2%}",
+            f"{_lower['영구성장률']:.2%}",
+            f"{_upper['영구성장률']:.2%}",
+        ),
+        (
+            "주당 내재가치",
+            f"{_management['주당 내재가치']:,.0f}원",
+            f"{_lower['주당 내재가치']:,.0f}원",
+            f"{_upper['주당 내재가치']:,.0f}원",
+        ),
+        (
+            "상승여력",
+            f"{_management['상승여력']:.1%}",
+            f"{_lower['상승여력']:.1%}",
+            f"{_upper['상승여력']:.1%}",
+        ),
+    ]
+    _table_body = "".join(
+        "<tr>"
+        f"<td>{escape(label)}</td>"
+        f"<td>{escape(management_value)}</td>"
+        f"<td>{escape(lower_value)}</td>"
+        f"<td>{escape(upper_value)}</td>"
+        "</tr>"
+        for label, management_value, lower_value, upper_value in _comparison_rows
+    )
+    challenge_summary = mo.md(
+        f"""
+        <div class="challenge-panel">
+            <div class="challenge-panel-head">
+                <div>
+                    <div class="fcff-panel-title">
+                        경영진 주장 vs 감사인의 전문가적 판단
+                    </div>
+                    <div class="challenge-panel-caption">
+                        Management assertion을 방법·가정·데이터 관점에서 독립적으로 재평가
+                    </div>
+                </div>
+                <span class="challenge-status">{escape(_status_label)}</span>
+            </div>
+            <div class="challenge-case-grid">
+                <div class="challenge-case">
+                    <div class="challenge-case-name">경영진 주장 · MANAGEMENT ASSERTION</div>
+                    <div class="challenge-case-value">{_management['주당 내재가치']:,.0f}원</div>
+                    <div class="challenge-case-meta">
+                        WACC {_management['WACC']:.2%} · g {_management['영구성장률']:.2%}<br>
+                        상승여력 {_management['상승여력']:.1%}
+                    </div>
+                </div>
+                <div class="challenge-case challenge-case-review">
+                    <div class="challenge-case-name">감사인의 전문가적 판단 · RANGE ESTIMATE</div>
+                    <div class="challenge-case-value">
+                        {_lower['주당 내재가치']:,.0f}–{_upper['주당 내재가치']:,.0f}원
+                    </div>
+                    <div class="challenge-case-meta">
+                        중앙값 {_midpoint:,.0f}원 · 범위폭 {auditor_range_comparison['범위폭']:,.0f}원<br>
+                        상승여력 {_lower['상승여력']:.1%}–{_upper['상승여력']:.1%}
+                    </div>
+                </div>
+            </div>
+            <table class="challenge-table">
+                <thead>
+                    <tr><th>검토항목</th><th>경영진 주장</th><th>범위 하단</th><th>범위 상단</th></tr>
+                </thead>
+                <tbody>{_table_body}</tbody>
+            </table>
+            <div class="challenge-conclusion">{escape(auditor_range_conclusion)}</div>
+            <div class="audit-standard">
+                <div class="audit-standard-ref">감사기준서 540 · 문단 29(a) 및 A124</div>
+                <p class="audit-standard-quote">
+                    범위에는 충분하고 적합한 감사증거로 뒷받침되는 금액만 포함되어야 하며,
+                    양 극단의 합리성에 대한 증거는 그 사이 금액의 합리성도 뒷받침합니다.
+                </p>
+            </div>
+            <div class="misstatement-card">
+                <div>
+                    <div class="misstatement-label">
+                        범위 이탈 판단적 왜곡표시 · {_misstatement_direction}
+                    </div>
+                    <div class="challenge-case-meta">
+                        경영진 점추정치와 가장 가까운 범위 금액
+                        {_nearest_range_value:,.0f}원의 차이
+                    </div>
+                </div>
+                <div class="misstatement-value">{_misstatement:,.0f}원/주</div>
+            </div>
+            <div class="standard-inline" style="margin-top: 7px;">
+                <strong>감사기준서 540 · A139 / 감사기준서 450 · A6</strong> —
+                경영진 점추정치를 포함하지 않는 범위가 감사증거로 뒷받침되는 경우,
+                가장 가까운 범위 지점과의 차이는 판단적 왜곡표시로 집계됩니다.
+            </div>
+            <a
+                class="audit-standard-source"
+                href="https://kicpa.or.kr/board/read.brd?boardId=acc0102&amp;bltnNo=11786004332051&amp;cmd=READ"
+                target="_blank"
+                rel="noopener noreferrer"
+            >한국공인회계사회 원문 · 첨부 기준서 pp. 480, 517–519 ↗</a>
+        </div>
+        """
+    )
+    return challenge_controls, challenge_summary
 
 
 @app.cell
@@ -967,7 +1781,7 @@ def _(COLORS, apply_chart_style, forecast_display, go):
 
     fcff_fig = apply_chart_style(
         fcff_fig,
-        height=390,
+        height=300,
     )
     return (fcff_fig,)
 
@@ -1002,7 +1816,7 @@ def _(
     )
     fcff_waterfall_fig = apply_chart_style(
         fcff_waterfall_fig,
-        height=390,
+        height=285,
     )
     return (
         fcff_waterfall_fig,
@@ -1065,18 +1879,32 @@ def _(
                 "background": COLORS["surface"],
                 "border": f"1px solid {COLORS['line']}",
                 "border-radius": "10px",
-                "padding": "18px",
-                "min-height": "390px",
+                "padding": "12px",
                 "box-shadow": "0 2px 8px rgba(16, 42, 67, 0.05)",
             }
         )
     )
     fcff_waterfall_view = mo.ui.plotly(fcff_waterfall_fig)
-    fcff_waterfall_row = mo.hstack(
-        [fcff_waterfall_summary, fcff_waterfall_view],
-        widths=[0.25, 0.75],
-        gap=1,
-        align="stretch",
+    _fcff_header = mo.md(
+        """
+        <div class="section-title">EBIT에서 FCFF로의 전환</div>
+        <div class="section-subtitle">
+            영업관련 법인세·D&amp;A·Capex·NWC 증감의 현금흐름 효과
+        </div>
+        """
+    )
+    fcff_waterfall_row = mo.vstack(
+        [
+            _fcff_header,
+            mo.hstack(
+                [fcff_waterfall_summary, fcff_waterfall_view],
+                widths=[0.22, 0.78],
+                gap=1,
+                align="stretch",
+                wrap=False,
+            ),
+        ],
+        gap=0.45,
     )
     return (fcff_waterfall_row,)
 
@@ -1132,6 +1960,10 @@ def _(
     bridge_values,
     go,
 ):
+    _bridge_peak = (
+        bridge_values[0]
+        + sum(max(value, 0) for value in bridge_values[1:-1])
+    )
     bridge_fig = go.Figure(
         go.Waterfall(
             x=bridge_labels,
@@ -1180,58 +2012,96 @@ def _(
 
     bridge_fig.update_yaxes(
         title="조원",
+        range=[0, _bridge_peak * 1.18],
     )
 
     bridge_fig = apply_chart_style(
         bridge_fig,
-        height=390,
+        height=300,
     )
     return (bridge_fig,)
 
 
 @app.cell
 def _(
+    auditor_range_sensitivity_fig,
     bridge_fig,
+    challenge_controls,
+    challenge_summary,
     fcff_fig,
-    fcff_waterfall_row,
     mo,
-    scenario_fig,
     sensitivity_fig,
 ):
     sensitivity_view = mo.ui.plotly(sensitivity_fig)
-    scenario_view = mo.ui.plotly(scenario_fig)
+    auditor_range_sensitivity_view = mo.ui.plotly(
+        auditor_range_sensitivity_fig
+    )
     fcff_view = mo.ui.plotly(fcff_fig)
     bridge_view = mo.ui.plotly(bridge_fig)
 
-    visual_section_header = mo.md(
-        """
-        <div class="section-title">
-            가치평가 결과 및 핵심 변동요인
-        </div>
-        <div class="section-subtitle">
-            할인율·영구성장률 민감도, 사업 시나리오,
-            현금창출력 및 지분가치 연결
-        </div>
-        """
-    )
-
-    visual_grid = mo.vstack(
+    overview_visuals = mo.vstack(
         [
-            mo.hstack(
-                [sensitivity_view, scenario_view],
-                widths=[1.15, 0.85],
-                gap=1,
+            mo.md(
+                """
+                <div class="section-title">영업전망과 Equity Bridge</div>
+                <div class="section-subtitle">
+                    FCFF 창출력과 기업가치에서 지분가치로의 연결
+                </div>
+                """
             ),
             mo.hstack(
                 [fcff_view, bridge_view],
                 widths=[1, 1],
                 gap=1,
             ),
-            fcff_waterfall_row,
         ],
-        gap=1,
+        gap=0.7,
     )
-    return visual_grid, visual_section_header
+
+    sensitivity_chapter_body = mo.vstack(
+        [
+            mo.md(
+                """
+                <div class="section-title">핵심 가정 검토 및 판단 차이</div>
+                <div class="section-subtitle">
+                    경영진 주장을 감사인의 전문가적 판단으로 재평가하고 가치 차이로 연결
+                </div>
+                <div class="standard-inline">
+                    <strong>감사기준서 540 · 문단 28</strong> — 감사인의 추가감사절차에는
+                    방법, 가정 또는 사용된 데이터가 재무보고체계의 관점에서 적합한지
+                    평가하는 절차가 포함되어야 합니다.
+                </div>
+                """
+            ),
+            mo.hstack(
+                [
+                    challenge_controls,
+                    challenge_summary,
+                    mo.vstack(
+                        [
+                            mo.md(
+                                """
+                                <div class="section-title">WACC × 영구성장률</div>
+                                <div class="section-subtitle">
+                                    경영진 점추정치와 감사인 범위추정치 비교
+                                </div>
+                                """
+                            ),
+                            sensitivity_view,
+                            auditor_range_sensitivity_view,
+                        ],
+                        gap=0.45,
+                    ),
+                ],
+                widths=[0.25, 0.40, 0.35],
+                gap=1,
+                align="start",
+                wrap=False,
+            ),
+        ],
+        gap=0.55,
+    )
+    return overview_visuals, sensitivity_chapter_body
 
 
 @app.cell
@@ -1429,7 +2299,11 @@ def _(escape):
                 f'<div class="formula-kpi-value">{escape(_formatted)}</div>'
                 "</div>"
             )
-        return '<div class="formula-kpi-grid">' + "".join(_cards) + "</div>"
+        return (
+            '<div class="formula-kpi-grid formula-input-grid">'
+            + "".join(_cards)
+            + "</div>"
+        )
 
     def formula_raw_input_table(formula_result):
         _raw_inputs = dict(formula_result["원본 입력값"])
@@ -1562,8 +2436,7 @@ def _(
                 "background": "#FFFFFF",
                 "border": "1px solid #D9E2EC",
                 "border-radius": "10px",
-                "padding": "18px",
-                "min-height": "420px",
+                "padding": "12px",
                 "box-shadow": "0 2px 8px rgba(16, 42, 67, 0.05)",
             }
         )
@@ -1660,9 +2533,26 @@ def _(
             "background": "#F7FAFC",
             "border": f"1px solid {COLORS['line']}",
             "border-radius": "9px",
-            "padding": "14px 16px",
-            "margin": "10px 0 12px 0",
+            "padding": "6px 10px",
+            "margin": "5px 0 6px 0",
         }
+    )
+    _formula_footer = mo.hstack(
+        [
+            mo.md(
+                f"""
+                <div class="formula-status-inline">
+                    <span class="formula-badge {_badge_class}">{_status}</span>
+                    <div class="formula-insight-compact">{escape(formula_insight)}</div>
+                </div>
+                """
+            ),
+            _formula_detail,
+        ],
+        widths=[0.76, 0.24],
+        gap=0.6,
+        align="center",
+        wrap=False,
     )
     formula_explorer_right = (
         mo.vstack(
@@ -1695,20 +2585,17 @@ def _(
                             <div class="formula-kpi-value">{_tolerance_value}</div>
                         </div>
                     </div>
-                    <span class="formula-badge {_badge_class}">{_status}</span>
-                    <div class="formula-insight">{escape(formula_insight)}</div>
                     """
                 ),
-                _formula_detail,
+                _formula_footer,
             ],
-            gap=0.5,
+            gap=0.3,
         ).style(
             {
                 "background": COLORS["surface"],
                 "border": f"1px solid {COLORS['line']}",
                 "border-radius": "10px",
-                "padding": "18px",
-                "min-height": "420px",
+                "padding": "12px",
                 "box-shadow": "0 2px 8px rgba(16, 42, 67, 0.05)",
             }
         )
@@ -1725,7 +2612,7 @@ def _(
 ):
     _formula_header = mo.md(
         """
-        <div class="section-title">가치평가 산식 및 계산 계보</div>
+        <div class="section-title">가치평가 산식 및 계산 구조</div>
         <div class="section-subtitle">
             공시자료에서 주당 내재가치까지의 계산 논리와 모델 대사
         </div>
@@ -1733,36 +2620,94 @@ def _(
     )
     _formula_body = mo.hstack(
         [formula_explorer_left, formula_explorer_right],
-        widths=[0.38, 0.62],
+        widths=[0.22, 0.78],
         gap=1,
         align="stretch",
+        wrap=False,
     )
     formula_explorer_section = mo.vstack(
         [_formula_header, formula_lineage, _formula_body],
-        gap=0.7,
+        gap=0.45,
     )
     return (formula_explorer_section,)
 
 
 @app.cell
 def _(
+    dashboard_css,
     executive_top,
+    fcff_waterfall_row,
     formula_explorer_section,
     mo,
-    visual_grid,
-    visual_section_header,
+    overview_visuals,
+    sensitivity_chapter_body,
 ):
-    valuation_overview_page = mo.vstack(
+    overview_page = mo.vstack(
         [
+            dashboard_css,
             executive_top,
-            visual_section_header,
-            visual_grid,
-            formula_explorer_section,
+            overview_visuals,
         ],
         gap=1.1,
     )
 
-    valuation_overview_page
+    calculation_structure_page = mo.vstack(
+        [
+            dashboard_css,
+            mo.md(
+                """
+                <div class="chapter-intro">
+                    <div class="chapter-kicker">MODEL LOGIC</div>
+                    <div class="chapter-title">계산구조</div>
+                    <div class="chapter-copy">
+                        매출액에서 EBIT·NOPAT·FCFF를 거쳐 기업가치와
+                        주당 내재가치에 도달하는 계산 구조를 검증합니다.
+                    </div>
+                </div>
+                """
+            ),
+            mo.vstack(
+                [formula_explorer_section, fcff_waterfall_row],
+                gap=0.45,
+            ),
+        ],
+        gap=1.1,
+    )
+
+    sensitivity_analysis_page = mo.vstack(
+        [
+            dashboard_css,
+            mo.md(
+                """
+                <div class="chapter-intro">
+                    <div class="chapter-kicker">INDEPENDENT REVIEW</div>
+                    <div class="chapter-title">민감도 분석</div>
+                    <div class="chapter-copy">
+                        경영진 주장과 감사인의 전문가적 판단을 분리하고,
+                        방법·가정·데이터의 변화가 가치범위에 미치는 영향을 검토합니다.
+                    </div>
+                    <div class="standard-inline" style="margin-top: 6px;">
+                        <strong>감사기준서 540 · A118</strong> — “경영진의 점추정치와
+                        추정불확실성에 대한 관련 공시를 평가하기 위해 감사인의 점추정치 또는
+                        범위추정치를 도출하는 것은 … 적합한 접근일 수 있다.”
+                    </div>
+                </div>
+                """
+            ),
+            sensitivity_chapter_body,
+        ],
+        gap=1.1,
+    )
+
+    dashboard_chapters = mo.ui.tabs(
+        {
+            "1. 가치평가 개요": overview_page,
+            "2. 계산구조": calculation_structure_page,
+            "3. 민감도 분석": sensitivity_analysis_page,
+        }
+    )
+
+    dashboard_chapters
     return
 
 
