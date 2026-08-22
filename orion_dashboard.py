@@ -2701,9 +2701,18 @@ def _(
 
     dashboard_chapters = mo.ui.tabs(
         {
-            "1. 가치평가 개요": overview_page,
-            "2. 계산구조": calculation_structure_page,
-            "3. 민감도 분석": sensitivity_analysis_page,
+            "1. 가치평가 개요": mo.lazy(
+                overview_page,
+                show_loading_indicator=True,
+            ),
+            "2. 계산구조": mo.lazy(
+                calculation_structure_page,
+                show_loading_indicator=True,
+            ),
+            "3. 민감도 분석": mo.lazy(
+                sensitivity_analysis_page,
+                show_loading_indicator=True,
+            ),
         }
     )
 
