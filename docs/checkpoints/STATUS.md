@@ -6,12 +6,22 @@
 |---|---|
 | 현재 Phase | Phase 1 — 모델 감사 및 통제 기반 |
 | 완료 작업 | 1.2 출처대장, 데이터 사전 및 데이터 계보 구축 |
-| 작업 브랜치 | `valuation-v2` |
+| 작업 브랜치 | `feature/independent-review-challenge-mode` |
 | 기준선 원천 커밋 | `0f54ca2000c25a75649288887b806028ad5a5433` |
 | 기준선 ID | `orion-dcf-2025-12-31-v1` |
 | 가치평가기준일 | 2025-12-31 |
 | 정보기준일 | 2026-03-18 |
 | 다음 작업 | **1.3 가정 근거팩과 독립 검토 증적 구축** |
+
+## Dashboard Review Mode 프로토타입
+
+- Dashboard를 `1. 가치평가 개요 / 2. 계산구조 / 3. 민감도 분석`의 3개 Chapter로 재구성
+- Executive KPI·FCFF 전망·Equity Bridge를 가치평가 개요에 통합
+- Formula Explorer 다음에 EBIT→FCFF Waterfall이 이어지도록 계산 계보 순서 정리
+- Management Case와 감사인 독립검토 Case를 분리하고 매출성장률·EBIT Margin·WACC·영구성장률 Challenge 가정을 사용자 입력으로 제공
+- 각 Case의 WACC×영구성장률 민감도를 동일한 폭으로 비교하고 중앙값을 해당 Case 주당가치와 자동 대사
+- 민감도 재평가는 Excel을 반복해서 열지 않고 이미 산출된 FCFF와 Equity Bridge를 이용하는 순수 계산함수로 분리
+- 기본 독립검토 가정은 아직 외부 근거팩으로 승인된 판단이 아니므로 교육용 시뮬레이션으로 명시
 
 ## 작업 1.2 완료내용
 
@@ -42,11 +52,13 @@
 | 검증 | 결과 | 비고 |
 |---|---|---|
 | `python scripts/validate_source_registry.py --json` | PASS | 82행, 오류·경고 0 |
-| `python -m pytest -q` | PASS — 27개 | 1.71초 |
+| `python -m pytest -q` | PASS — 155개 | 기존 회귀검증 + Challenge Mode 6개 |
 | `python -m marimo check orion_dashboard.py` | PASS | 오류 출력 없음 |
 | `python scripts/capture_baseline.py` | PASS | 출력서명 `6aed0bb1…3097b` 유지 |
 | 입력 Excel SHA-256 | PASS | `1e57dc75…de8d` 유지 |
 | `git diff --check` | PASS | 공백 오류 없음 |
+| 실제 오리온 모델 Challenge smoke test | PASS | Management 244,708원, Reviewer 200,474원, 차이 -18.1% |
+| `marimo export html orion_dashboard.py` | PASS | 전체 Cell 실행 및 정적 HTML 생성 |
 
 ## 잔여 핵심 이슈
 
