@@ -4,7 +4,7 @@
 
 지역별 매출액 전망에서 EBIT·NOPAT·FCFF를 거쳐 Enterprise Value (EV)·Equity Value·Implied Share Price에 도달하는 계산 구조를 구현했습니다. 또한 경영진 주장과 감사인의 전문가적 판단을 분리하여 주요 가정, Valuation Range 및 잠재적 왜곡표시를 대화형으로 검토할 수 있도록 설계했습니다.
 
-[▶ 최신 대화형 가치평가 대시보드 실행](https://molab.marimo.io/notebooks/nb_7uHUTgLd6vYunzhsz7GrPW/app)
+[▶ 최신 대화형 가치평가 대시보드 실행](https://molab.marimo.io/notebooks/nb_PS4goXzNF4h4P2w8Gg7ZrS/app)
 
 > 평가기준일: 2025년 12월 31일  
 > Current Share Price 기준일: 2026년 8월 21일
