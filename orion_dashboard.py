@@ -752,6 +752,25 @@ def _(mo):
                 text-decoration: underline;
             }}
 
+            .model-governance {{
+                margin-top: 10px;
+                padding: 9px 10px;
+                border: 1px solid {COLORS["line"]};
+                border-radius: 8px;
+                background: {COLORS["soft"]};
+            }}
+
+            .model-governance summary {{
+                cursor: pointer;
+                color: {COLORS["navy"]};
+                font-size: 12px;
+                font-weight: 800;
+            }}
+
+            .model-governance[open] summary {{
+                margin-bottom: 8px;
+            }}
+
             .challenge-table {{
                 width: 100%;
                 border-collapse: collapse;
@@ -1341,7 +1360,7 @@ def _(
 
     sensitivity_fig.update_layout(
         title=(
-            "<b>경영진 주장 민감도</b>"
+            "<b>Base Case Sensitivity</b>"
             "<br><sup>WACC × Terminal Growth Rate · Implied Share Price, 천원 · ● 기준</sup>"
         )
     )
@@ -1719,7 +1738,7 @@ def _(
     )
     auditor_range_sensitivity_fig.update_layout(
         title=(
-            "<b>감사인 범위추정치 민감도</b>"
+            "<b>Independent Valuation Range Sensitivity</b>"
             "<br><sup>셀: 하단–상단, 천원 · 색상: Median · ● 기준</sup>"
         )
     )
@@ -1758,21 +1777,35 @@ def _(
     _misstatement_direction = auditor_range_comparison["왜곡표시 방향"]
     _nearest_range_value = auditor_range_comparison["가장 가까운 범위 금액"]
     _status_label = {
-        "OUTSIDE_RANGE": "경영진 주장 범위 밖",
-        "WITHIN_RANGE": "경영진 주장 범위 내",
+        "OUTSIDE_RANGE": "Base Case 범위 밖",
+        "WITHIN_RANGE": "Base Case 범위 내",
     }.get(
         auditor_range_comparison["검토상태"],
         auditor_range_comparison["검토상태"],
+    )
+    _range_position = (
+        "내"
+        if _lower["주당 내재가치"]
+        <= _management["주당 내재가치"]
+        <= _upper["주당 내재가치"]
+        else "밖"
+    )
+    _ib_range_conclusion = (
+        f"Independent Valuation Range는 "
+        f"{_lower['주당 내재가치']:,.0f}원–{_upper['주당 내재가치']:,.0f}원이며 "
+        f"중앙값은 {_midpoint:,.0f}원입니다. "
+        f"Base Case {_management['주당 내재가치']:,.0f}원은 범위 {_range_position}에 있습니다. "
+        "핵심 가정 변화가 가치평가 결과에 미치는 영향을 독립적으로 검토한 범위입니다."
     )
 
     challenge_controls = mo.vstack(
         [
             mo.md(
                 """
-                <div class="fcff-panel-title">감사인 판단 범위 조정</div>
+                <div class="fcff-panel-title">Downside Assumption Range</div>
                 <div class="fcff-panel-caption">
-                    네 가지 핵심 가정의 하단·상단을 설정합니다.
-                    Slider 옆 입력란에 %p 값을 직접 입력할 수 있습니다.
+                    Revenue CAGR, EBIT Margin, WACC, Terminal Growth Rate의
+                    downside 범위를 설정합니다. Slider 옆 입력란에 %p 값을 직접 입력할 수 있습니다.
                 </div>
                 """
             ),
@@ -1801,15 +1834,7 @@ def _(
                 ],
                 gap=0.45,
             ),
-            mo.md(
-                """
-                <div class="standard-inline">
-                    <strong>감사기준서 540 · A121</strong> — 감사인은 경영진의
-                    모형에 대체 가정·데이터를 적용하거나, 감사인 자신의 방법·가정·데이터로
-                    점추정치 또는 범위를 도출할 수 있습니다.
-                </div>
-                """
-            ),
+
         ],
         gap=0.7,
     ).style(
@@ -1875,17 +1900,17 @@ def _(
             <div class="challenge-panel-head">
                 <div>
                     <div class="fcff-panel-title">
-                        경영진 주장 vs 감사인의 전문가적 판단
+                        Base Case vs Independent Valuation Range
                     </div>
                     <div class="challenge-panel-caption">
-                        Management assertion을 방법·가정·데이터 관점에서 독립적으로 재평가
+                        Base Case의 방법·가정·데이터를 독립적 downside scenario와 비교
                     </div>
                 </div>
                 <span class="challenge-status">{escape(_status_label)}</span>
             </div>
             <div class="challenge-case-grid">
                 <div class="challenge-case">
-                    <div class="challenge-case-name">경영진 주장 · MANAGEMENT ASSERTION</div>
+                    <div class="challenge-case-name">BASE CASE · MANAGEMENT CASE</div>
                     <div class="challenge-case-value">{_management['주당 내재가치']:,.0f}원</div>
                     <div class="challenge-case-meta">
                         WACC {_management['WACC']:.2%} · g {_management['영구성장률']:.2%}<br>
@@ -1893,7 +1918,7 @@ def _(
                     </div>
                 </div>
                 <div class="challenge-case challenge-case-review">
-                    <div class="challenge-case-name">감사인의 전문가적 판단 · RANGE ESTIMATE</div>
+                    <div class="challenge-case-name">INDEPENDENT VALUATION RANGE · DOWNSIDE CASE</div>
                     <div class="challenge-case-value">
                         {_lower['주당 내재가치']:,.0f}–{_upper['주당 내재가치']:,.0f}원
                     </div>
@@ -1905,41 +1930,48 @@ def _(
             </div>
             <table class="challenge-table">
                 <thead>
-                    <tr><th>검토항목</th><th>경영진 주장</th><th>범위 하단</th><th>범위 상단</th></tr>
+                    <tr><th>Key Assumption</th><th>Base Case</th><th>Range Low</th><th>Range High</th></tr>
                 </thead>
                 <tbody>{_table_body}</tbody>
             </table>
-            <div class="challenge-conclusion">{escape(auditor_range_conclusion)}</div>
-            <div class="audit-standard">
-                <div class="audit-standard-ref">감사기준서 540 · 문단 29(a) 및 A124</div>
-                <p class="audit-standard-quote">
-                    범위에는 충분하고 적합한 감사증거로 뒷받침되는 금액만 포함되어야 하며,
-                    양 극단의 합리성에 대한 증거는 그 사이 금액의 합리성도 뒷받침합니다.
-                </p>
-            </div>
-            <div class="misstatement-card">
-                <div>
-                    <div class="misstatement-label">
-                        범위 이탈 판단적 왜곡표시 · {_misstatement_direction}
-                    </div>
-                    <div class="challenge-case-meta">
-                        경영진 점추정치와 가장 가까운 범위 금액
-                        {_nearest_range_value:,.0f}원의 차이
-                    </div>
+            <div class="challenge-conclusion">{escape(_ib_range_conclusion)}</div>
+            <details class="model-governance">
+                <summary>Model Governance 상세</summary>
+                <div class="standard-inline">
+                    <strong>감사기준서 540 · A121</strong> — 대체 가정·데이터 또는
+                    독립적인 방법·가정·데이터를 적용해 점추정치나 범위를 도출할 수 있습니다.
                 </div>
-                <div class="misstatement-value">{_misstatement:,.0f}원/주</div>
-            </div>
-            <div class="standard-inline" style="margin-top: 7px;">
-                <strong>감사기준서 540 · A139 / 감사기준서 450 · A6</strong> —
-                경영진 점추정치를 포함하지 않는 범위가 감사증거로 뒷받침되는 경우,
-                가장 가까운 범위 지점과의 차이는 판단적 왜곡표시로 집계됩니다.
-            </div>
-            <a
-                class="audit-standard-source"
-                href="https://kicpa.or.kr/board/read.brd?boardId=acc0102&amp;bltnNo=11786004332051&amp;cmd=READ"
-                target="_blank"
-                rel="noopener noreferrer"
-            >한국공인회계사회 원문 · 첨부 기준서 pp. 480, 517–519 ↗</a>
+                <div class="audit-standard">
+                    <div class="audit-standard-ref">감사기준서 540 · 문단 29(a) 및 A124</div>
+                    <p class="audit-standard-quote">
+                        범위에는 충분하고 적합한 증거로 뒷받침되는 금액만 포함하며,
+                        양 극단과 그 사이 금액의 합리성을 함께 검토합니다.
+                    </p>
+                </div>
+                <div class="misstatement-card">
+                    <div>
+                        <div class="misstatement-label">
+                            범위 이탈 판단적 왜곡표시 · {_misstatement_direction}
+                        </div>
+                        <div class="challenge-case-meta">
+                            Base Case와 가장 가까운 범위 금액
+                            {_nearest_range_value:,.0f}원의 차이
+                        </div>
+                    </div>
+                    <div class="misstatement-value">{_misstatement:,.0f}원/주</div>
+                </div>
+                <div class="standard-inline" style="margin-top: 7px;">
+                    <strong>감사기준서 540 · A139 / 감사기준서 450 · A6</strong> —
+                    Base Case가 증거로 뒷받침되는 범위를 벗어나는 경우,
+                    가장 가까운 범위 지점과의 차이를 별도로 추적합니다.
+                </div>
+                <a
+                    class="audit-standard-source"
+                    href="https://kicpa.or.kr/board/read.brd?boardId=acc0102&amp;bltnNo=11786004332051&amp;cmd=READ"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >한국공인회계사회 원문 · 첨부 기준서 pp. 480, 517–519 ↗</a>
+            </details>
         </div>
         """
     )
@@ -2343,14 +2375,9 @@ def _(
         [
             mo.md(
                 """
-                <div class="section-title">핵심 가정 검토 및 판단 차이</div>
+                <div class="section-title">Scenario &amp; Assumption Review</div>
                 <div class="section-subtitle">
-                    경영진 주장을 감사인의 전문가적 판단으로 재평가하고 가치 차이로 연결
-                </div>
-                <div class="standard-inline">
-                    <strong>감사기준서 540 · 문단 28</strong> — 감사인의 추가감사절차에는
-                    방법, 가정 또는 사용된 데이터가 재무보고체계의 관점에서 적합한지
-                    평가하는 절차가 포함되어야 합니다.
+                    Base Case를 독립적 downside 가정과 비교하고 가치 차이로 연결
                 </div>
                 """
             ),
@@ -2364,7 +2391,7 @@ def _(
                                 """
                                 <div class="section-title">WACC × Terminal Growth Rate</div>
                                 <div class="section-subtitle">
-                                    경영진 점추정치와 감사인 범위추정치 비교
+                                    Base Case와 Independent Valuation Range 비교
                                 </div>
                                 """
                             ),
@@ -3512,18 +3539,12 @@ def _(
             mo.md(
                 """
                 <div class="chapter-intro">
-                    <div class="chapter-kicker">ACCOUNTING ESTIMATES REVIEW</div>
-                    <div class="chapter-title">민감도 분석 &amp; 회계추정치</div>
+                    <div class="chapter-kicker">SCENARIO ANALYSIS</div>
+                    <div class="chapter-title">Scenario &amp; Assumption Review</div>
                     <div class="chapter-copy">
-                        회계추정에 사용된 방법·가정·데이터의 적합성을 검토하고, 경영진의
-                        점추정치와 감사인의 범위추정치를 비교합니다. 추정불확실성과 잠재
-                        왜곡표시를 식별하며 WACC·영구성장률·매출 성장률·영업이익률 변화가
-                        가치평가 결론에 미치는 영향을 분석합니다.
-                    </div>
-                    <div class="standard-inline" style="margin-top: 6px;">
-                        <strong>감사기준서 540 · A118</strong> — “경영진의 점추정치와
-                        추정불확실성에 대한 관련 공시를 평가하기 위해 감사인의 점추정치 또는
-                        범위추정치를 도출하는 것은 … 적합한 접근일 수 있다.”
+                        Base Case와 Independent Valuation Range를 비교해 Key Assumption Risk를
+                        식별합니다. WACC·Terminal Growth Rate·Revenue CAGR·EBIT Margin 변화가
+                        Implied Share Price와 valuation range에 미치는 영향을 분석합니다.
                     </div>
                 </div>
                 """
@@ -3563,7 +3584,7 @@ def _(
                 calculation_structure_page,
                 show_loading_indicator=True,
             ),
-            "3. 민감도 분석 & 회계추정치": mo.lazy(
+            "3. Scenario & Assumption Review": mo.lazy(
                 sensitivity_analysis_page,
                 show_loading_indicator=True,
             ),
