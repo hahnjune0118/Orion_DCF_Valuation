@@ -28,6 +28,14 @@ def _():
         select_forecast_row,
     )
     from orion_dcf import run_orion_dcf
+    from market_calibration import (
+        calculate_historical_multiple_ranges,
+        calculate_trading_comps_ranges,
+        load_market_calibration_data,
+        prepare_beta_calibration,
+        prepare_football_field_ranges,
+        solve_reverse_dcf_growth,
+    )
 
     return (
         Path,
@@ -37,10 +45,15 @@ def _():
         build_formula_explorer_insight,
         build_valuation_formula_catalog,
         calculate_fcff_waterfall_kpis,
+        calculate_historical_multiple_ranges,
+        calculate_trading_comps_ranges,
         escape,
         go,
         mo,
         pd,
+        load_market_calibration_data,
+        prepare_beta_calibration,
+        prepare_football_field_ranges,
         prepare_auditor_range_comparison,
         prepare_challenge_sensitivity_data,
         prepare_fcff_waterfall_data,
@@ -48,11 +61,12 @@ def _():
         reconcile_formula_result,
         run_orion_dcf,
         select_forecast_row,
+        solve_reverse_dcf_growth,
     )
 
 
 @app.cell
-def _(Path, pd, run_orion_dcf):
+def _(Path, load_market_calibration_data, pd, run_orion_dcf):
     project_root = Path.cwd()
 
     excel_path = (
@@ -80,7 +94,23 @@ def _(Path, pd, run_orion_dcf):
 
     model = run_orion_dcf(excel_path)
     forecast_df = pd.DataFrame(model["전망"])
-    return excel_path, forecast_df, model
+    market_calibration_path = (
+        project_root / "data" / "metadata" / "market_calibration.csv"
+    )
+    if not market_calibration_path.exists():
+        from tempfile import gettempdir
+        from urllib.request import urlretrieve
+
+        cloud_market_path = Path(gettempdir()) / "market_calibration.csv"
+        urlretrieve(
+            "https://raw.githubusercontent.com/"
+            "hahnjune0118/Orion_DCF_Valuation/"
+            "main/data/metadata/market_calibration.csv",
+            cloud_market_path,
+        )
+        market_calibration_path = cloud_market_path
+    market_peers = load_market_calibration_data(market_calibration_path)
+    return excel_path, forecast_df, market_peers, model
 
 
 @app.cell
@@ -804,9 +834,245 @@ def _(mo):
                 text-align: left;
             }}
 
+            .market-grid {{
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 12px;
+                margin: 12px 0;
+            }}
+
+            .market-card {{
+                background: {COLORS["surface"]};
+                border: 1px solid #CBD5E1;
+                border-top: 3px solid {COLORS["blue"]};
+                border-radius: 10px;
+                padding: 15px 16px;
+                min-height: 116px;
+                box-shadow: 0 2px 8px rgba(16, 42, 67, 0.05);
+            }}
+
+            .market-card-label {{
+                color: #475569;
+                font-size: 14px;
+                font-weight: 780;
+                line-height: 1.4;
+            }}
+
+            .market-card-value {{
+                color: {COLORS["navy"]};
+                font-size: 27px;
+                font-weight: 810;
+                margin-top: 7px;
+                font-variant-numeric: tabular-nums;
+            }}
+
+            .market-card-note {{
+                color: #475569;
+                font-size: 14px;
+                line-height: 1.55;
+                margin-top: 7px;
+            }}
+
+            .market-section {{
+                margin-top: 18px;
+                min-width: 0;
+            }}
+
+            .market-section-title {{
+                color: {COLORS["navy"]};
+                font-size: 22px;
+                font-weight: 800;
+                line-height: 1.35;
+                margin-bottom: 4px;
+            }}
+
+            .market-section-copy {{
+                color: #475569;
+                font-size: 15px;
+                line-height: 1.6;
+                margin-bottom: 10px;
+                max-width: 1180px;
+            }}
+
+            .market-chart-card {{
+                min-width: 0;
+                overflow-x: auto;
+                background: #FFFFFF;
+                border: 1px solid #CBD5E1;
+                border-radius: 10px;
+                padding: 8px 10px 2px;
+            }}
+
+            .chart-insight {{
+                margin: 8px 0 16px;
+                padding: 11px 13px;
+                border-left: 3px solid {COLORS["teal"]};
+                border-radius: 0 8px 8px 0;
+                background: #EDF7F6;
+                color: #243B53;
+                font-size: 15px;
+                line-height: 1.6;
+            }}
+
+            .reverse-concept {{
+                background: #F7FAFC;
+                border: 1px solid #CBD5E1;
+                border-radius: 10px;
+                padding: 16px;
+            }}
+
+            .reverse-flow {{
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 10px;
+                margin-top: 13px;
+            }}
+
+            .reverse-step {{
+                min-width: 0;
+                background: #FFFFFF;
+                border: 1px solid #CBD5E1;
+                border-top: 3px solid {COLORS["teal"]};
+                border-radius: 9px;
+                padding: 12px;
+            }}
+
+            .reverse-step-number {{
+                color: {COLORS["teal"]};
+                font-size: 13px;
+                font-weight: 800;
+            }}
+
+            .reverse-step-title {{
+                color: {COLORS["navy"]};
+                font-size: 15px;
+                font-weight: 800;
+                line-height: 1.4;
+                margin-top: 3px;
+            }}
+
+            .reverse-step-copy {{
+                color: #475569;
+                font-size: 14px;
+                line-height: 1.5;
+                margin-top: 4px;
+            }}
+
+            .reverse-recon-grid {{
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 9px;
+                margin-top: 12px;
+            }}
+
+            .reverse-recon-item {{
+                min-width: 0;
+                background: #F7FAFC;
+                border: 1px solid #D9E2EC;
+                border-radius: 8px;
+                padding: 10px 11px;
+            }}
+
+            .reverse-recon-label {{
+                color: #475569;
+                font-size: 13px;
+                font-weight: 700;
+                line-height: 1.4;
+            }}
+
+            .reverse-recon-value {{
+                color: {COLORS["navy"]};
+                font-size: 18px;
+                font-weight: 820;
+                line-height: 1.25;
+                margin-top: 3px;
+                overflow-wrap: anywhere;
+            }}
+
+            .reconciled-badge {{
+                display: inline-flex;
+                align-items: center;
+                border-radius: 999px;
+                padding: 5px 10px;
+                background: #DDF3F0;
+                border: 1px solid #ABDCD5;
+                color: #176B63;
+                font-size: 13px;
+                font-weight: 820;
+                letter-spacing: 0.03em;
+            }}
+
+            .interpretation-panel {{
+                background: #F7FAFC;
+                border: 1px solid #CBD5E1;
+                border-radius: 10px;
+                padding: 15px 17px;
+                color: #243B53;
+                font-size: 15px;
+                line-height: 1.65;
+            }}
+
+            .interpretation-panel ul {{
+                margin: 8px 0 0 20px;
+                padding: 0;
+            }}
+
+            .interpretation-panel li {{
+                margin: 5px 0;
+            }}
+
+            .market-table-wrap {{
+                overflow-x: auto;
+                border: 1px solid {COLORS["line"]};
+                border-radius: 9px;
+                background: {COLORS["surface"]};
+            }}
+
+            .market-table {{
+                width: 100%;
+                min-width: 900px;
+                border-collapse: collapse;
+                font-size: 14px;
+            }}
+
+            .market-table th,
+            .market-table td {{
+                padding: 7px 8px;
+                border-bottom: 1px solid #E9EEF3;
+                text-align: right;
+                white-space: nowrap;
+            }}
+
+            .market-table th {{
+                color: #334E68;
+                font-weight: 800;
+                background: #F8FAFC;
+            }}
+
+            .market-table th:first-child,
+            .market-table td:first-child {{
+                text-align: left;
+            }}
+
+            .market-warning {{
+                border-left: 3px solid {COLORS["orange"]};
+                background: #FFF4ED;
+                color: {COLORS["ink"]};
+                border-radius: 0 7px 7px 0;
+                padding: 8px 10px;
+                font-size: 14px;
+                line-height: 1.6;
+            }}
+
             @media (max-width: 900px) {{
                 .formula-kpi-grid,
-                .formula-input-grid {{
+                .formula-input-grid,
+                .market-grid {{
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }}
+
+                .reverse-flow,
+                .reverse-recon-grid {{
                     grid-template-columns: repeat(2, minmax(0, 1fr));
                 }}
 
@@ -817,11 +1083,18 @@ def _(mo):
                 .pitch-title {{
                     font-size: 22px;
                 }}
+
+                .market-section-title {{
+                    font-size: 20px;
+                }}
             }}
 
             @media (max-width: 640px) {{
                 .formula-kpi-grid,
-                .challenge-case-grid {{
+                .challenge-case-grid,
+                .market-grid,
+                .reverse-flow,
+                .reverse-recon-grid {{
                     grid-template-columns: 1fr;
                 }}
 
@@ -835,6 +1108,14 @@ def _(mo):
 
                 .challenge-status {{
                     margin-top: 8px;
+                }}
+
+                .market-card-value {{
+                    font-size: 25px;
+                }}
+
+                .market-chart-card {{
+                    padding: 4px;
                 }}
             }}
         </style>
@@ -874,9 +1155,9 @@ def _(current_price, mo, upside, value_per_share):
             </div>
 
             <div class="pitch-title">
-                Valuation 시나리오상 주당 내재가치는
+                Valuation 시나리오상 Implied Share Price는
                 <span class="dynamic-value-chip" title="모델 계산값">{value_per_share:,.0f}</span>원으로
-                주식 시장가치
+                Current Share Price
                 <span class="market-value-group"><span class="dynamic-value-chip" title="시장 기준값">{current_price:,.0f}</span>원<span class="pitch-inline-meta">(오리온 271560; 2026.08.21 기준)</span></span>
                 대비 <span class="dynamic-value-chip" title="모델 계산값">{upside:.1%}</span>의
                 상승여력을 시사합니다.
@@ -885,7 +1166,7 @@ def _(current_price, mo, upside, value_per_share):
             <div class="pitch-subtitle">
                 지역별 매출액 전망과 영업수익성, 투자소요 및
                 운전자본 변동을 FCFF로 전환하여 산정했습니다.
-                가치 변동의 핵심 변수는 WACC와 영구성장률입니다.
+                가치 변동의 핵심 변수는 WACC와 Terminal Growth Rate입니다.
             </div>
 
             <div class="pitch-meta">
@@ -909,15 +1190,15 @@ def _(
     kpi_strip = mo.hstack(
         [
             kpi_card(
-                "기업가치",
+                "Enterprise Value (EV)",
                 f"{enterprise_value / 1_000_000:.2f}조원",
                 "FCFF 현재가치 + 계속가치",
                 COLORS["teal"],
             ),
             kpi_card(
-                "지분가치",
+                "Equity Value",
                 f"{equity_value / 1_000_000:.2f}조원",
-                "기업가치에서 순차입금 등 조정",
+                "Enterprise Value (EV)에서 Net Debt 등 조정",
                 COLORS["blue"],
             ),
             kpi_card(
@@ -1051,8 +1332,8 @@ def _(
             ygap=2,
             hovertemplate=(
                 "WACC %{x}<br>"
-                "영구성장률 %{y}<br>"
-                "주당 내재가치 %{z:,.0f}천원"
+                "Terminal Growth Rate %{y}<br>"
+                "Implied Share Price %{z:,.0f}천원"
                 "<extra></extra>"
             ),
         )
@@ -1061,7 +1342,7 @@ def _(
     sensitivity_fig.update_layout(
         title=(
             "<b>경영진 주장 민감도</b>"
-            "<br><sup>WACC × 영구성장률 · 주당 내재가치, 천원 · ● 기준</sup>"
+            "<br><sup>WACC × Terminal Growth Rate · Implied Share Price, 천원 · ● 기준</sup>"
         )
     )
 
@@ -1071,7 +1352,7 @@ def _(
     )
 
     sensitivity_fig.update_yaxes(
-        title="영구성장률",
+        title="Terminal Growth Rate",
     )
 
     sensitivity_fig = apply_chart_style(
@@ -1152,7 +1433,7 @@ def _(COLORS, apply_chart_style, current_price, go, scenario_df):
             cliponaxis=False,
             hovertemplate=(
                 "%{x}<br>"
-                "주당 내재가치 %{y:,.0f}천원"
+                "Implied Share Price %{y:,.0f}천원"
                 "<extra></extra>"
             ),
         )
@@ -1169,7 +1450,7 @@ def _(COLORS, apply_chart_style, current_price, go, scenario_df):
 
     scenario_fig.update_layout(
         title=(
-            "<b>시나리오별 주당 내재가치</b>"
+            "<b>시나리오별 Implied Share Price</b>"
             "<br><sup>사업가정과 할인율을 동시 조정</sup>"
         ),
         showlegend=False,
@@ -1425,13 +1706,13 @@ def _(
                 [0.45, "#E4C27B"],
                 [1.00, COLORS["gold"]],
             ],
-            colorbar=dict(title="중앙값, 천원", thickness=12),
+            colorbar=dict(title="Median, 천원", thickness=12),
             xgap=2,
             ygap=2,
             hovertemplate=(
                 "WACC 변동 %{x}<br>"
-                "영구성장률 변동 %{y}<br>"
-                "범위 중앙값 %{z:,.0f}천원"
+                "Terminal Growth Rate 변동 %{y}<br>"
+                "Valuation Range Median %{z:,.0f}천원"
                 "<extra></extra>"
             ),
         )
@@ -1439,13 +1720,13 @@ def _(
     auditor_range_sensitivity_fig.update_layout(
         title=(
             "<b>감사인 범위추정치 민감도</b>"
-            "<br><sup>셀: 하단–상단, 천원 · 색상: 중앙값 · ● 기준</sup>"
+            "<br><sup>셀: 하단–상단, 천원 · 색상: Median · ● 기준</sup>"
         )
     )
     auditor_range_sensitivity_fig.update_xaxes(
         title="WACC 변동", side="top"
     )
-    auditor_range_sensitivity_fig.update_yaxes(title="영구성장률 변동")
+    auditor_range_sensitivity_fig.update_yaxes(title="Terminal Growth Rate 변동")
     auditor_range_sensitivity_fig = apply_chart_style(
         auditor_range_sensitivity_fig,
         height=255,
@@ -1497,7 +1778,7 @@ def _(
             ),
             mo.vstack(
                 [
-                    mo.md('<div class="range-control-label">매출성장률 조정 (%p)</div>'),
+                    mo.md('<div class="range-control-label">Revenue CAGR 조정 (%p)</div>'),
                     mo.hstack(
                         [auditor_lower_revenue_growth, auditor_upper_revenue_growth],
                         widths=[1, 1], gap=0.8, wrap=False,
@@ -1512,7 +1793,7 @@ def _(
                         [auditor_lower_wacc, auditor_upper_wacc],
                         widths=[1, 1], gap=0.8, wrap=False,
                     ),
-                    mo.md('<div class="range-control-label">영구성장률 조정 (%p)</div>'),
+                    mo.md('<div class="range-control-label">Terminal Growth Rate 조정 (%p)</div>'),
                     mo.hstack(
                         [auditor_lower_terminal_growth, auditor_upper_terminal_growth],
                         widths=[1, 1], gap=0.8, wrap=False,
@@ -1543,7 +1824,7 @@ def _(
 
     _comparison_rows = [
         (
-            "매출 CAGR",
+            "Revenue CAGR",
             f"{_management['매출 CAGR']:.2%}",
             f"{_lower['매출 CAGR']:.2%}",
             f"{_upper['매출 CAGR']:.2%}",
@@ -1561,13 +1842,13 @@ def _(
             f"{_upper['WACC']:.2%}",
         ),
         (
-            "영구성장률",
+            "Terminal Growth Rate",
             f"{_management['영구성장률']:.2%}",
             f"{_lower['영구성장률']:.2%}",
             f"{_upper['영구성장률']:.2%}",
         ),
         (
-            "주당 내재가치",
+            "Implied Share Price",
             f"{_management['주당 내재가치']:,.0f}원",
             f"{_lower['주당 내재가치']:,.0f}원",
             f"{_upper['주당 내재가치']:,.0f}원",
@@ -1617,7 +1898,7 @@ def _(
                         {_lower['주당 내재가치']:,.0f}–{_upper['주당 내재가치']:,.0f}원
                     </div>
                     <div class="challenge-case-meta">
-                        중앙값 {_midpoint:,.0f}원 · 범위폭 {auditor_range_comparison['범위폭']:,.0f}원<br>
+                        Median {_midpoint:,.0f}원 · Valuation Range 폭 {auditor_range_comparison['범위폭']:,.0f}원<br>
                         상승여력 {_lower['상승여력']:.1%}–{_upper['상승여력']:.1%}
                     </div>
                 </div>
@@ -2004,8 +2285,8 @@ def _(
 
     bridge_fig.update_layout(
         title=(
-            "<b>기업가치에서 지분가치로의 연결</b>"
-            "<br><sup>순비영업자산 및 차감항목 조정 · 조원</sup>"
+            "<b>Enterprise Value (EV)에서 Equity Value로의 연결</b>"
+            "<br><sup>비영업자산 및 Net Debt 등 조정 · 조원</sup>"
         ),
         showlegend=False,
     )
@@ -2081,7 +2362,7 @@ def _(
                         [
                             mo.md(
                                 """
-                                <div class="section-title">WACC × 영구성장률</div>
+                                <div class="section-title">WACC × Terminal Growth Rate</div>
                                 <div class="section-subtitle">
                                     경영진 점추정치와 감사인 범위추정치 비교
                                 </div>
@@ -2108,7 +2389,18 @@ def _(
 def _(build_valuation_formula_catalog, mo):
     _formula_stages = list(build_valuation_formula_catalog())
     formula_stage_selector = mo.ui.dropdown(
-        options={stage: stage for stage in _formula_stages},
+        options={
+            (
+                "Enterprise Value (EV)"
+                if stage == "DCF"
+                else "Equity Value"
+                if stage == "지분가치"
+                else "Implied Share Price"
+                if stage == "주당 내재가치"
+                else stage
+            ): stage
+            for stage in _formula_stages
+        },
         value="FCFF",
         label="가치평가 단계",
         allow_select_none=False,
@@ -2178,14 +2470,14 @@ def _(escape):
 
         if _stage == "WACC":
             _ordered_items = [
-                ("무위험수익률", _inputs["무위험수익률"], "rate"),
+                ("Risk-free Rate", _inputs["무위험수익률"], "rate"),
                 (
-                    "주식시장위험프리미엄",
+                    "Equity Risk Premium (ERP)",
                     _inputs["주식시장위험프리미엄"],
                     "rate",
                 ),
                 ("베타", _inputs["베타"], "multiple"),
-                ("국가위험프리미엄", _inputs["국가위험프리미엄"], "rate"),
+                ("Country Risk Premium (CRP)", _inputs["국가위험프리미엄"], "rate"),
                 ("자기자본비용", _details["자기자본비용"], "rate"),
                 (
                     "세전 타인자본비용",
@@ -2203,7 +2495,7 @@ def _(escape):
         elif _stage == "DCF":
             _ordered_items = [
                 ("WACC", _inputs["WACC"], "rate"),
-                ("영구성장률", _inputs["영구성장률"], "rate"),
+                ("Terminal Growth Rate", _inputs["영구성장률"], "rate"),
                 (
                     "추정기간 FCFF 현재가치",
                     _details["추정기간 FCFF 현재가치"] / 1_000_000,
@@ -2227,7 +2519,7 @@ def _(escape):
             ]
         elif _stage == "지분가치":
             _ordered_items = [
-                ("기업가치", _inputs["기업가치"], "trillion"),
+                ("Enterprise Value (EV)", _inputs["기업가치"], "trillion"),
                 (
                     "비영업자산 합계",
                     _details["비영업자산 합계"] / 1_000_000,
@@ -2256,7 +2548,7 @@ def _(escape):
             ]
         elif _stage == "주당 내재가치":
             _ordered_items = [
-                ("지분가치", _inputs["지분가치"], "trillion"),
+                ("Equity Value", _inputs["지분가치"], "trillion"),
                 (
                     "유통주식수",
                     _inputs["유통주식수(백만주)"],
@@ -2336,9 +2628,9 @@ def _(formula_result, mo):
         ("NOPAT", "FCFF", False),
         ("FCFF", "FCFF", False),
         ("WACC · 할인율 입력", "WACC", True),
-        ("기업가치", "DCF", False),
-        ("지분가치", "지분가치", False),
-        ("주당 내재가치", "주당 내재가치", False),
+        ("Enterprise Value (EV)", "DCF", False),
+        ("Equity Value", "지분가치", False),
+        ("Implied Share Price", "주당 내재가치", False),
     ]
     _stage_order = {
         "매출액": 0,
@@ -2614,7 +2906,7 @@ def _(
         """
         <div class="section-title">가치평가 산식 및 계산 구조</div>
         <div class="section-subtitle">
-            공시자료에서 주당 내재가치까지의 계산 논리와 모델 대사
+            공시자료에서 Implied Share Price까지의 계산 논리와 모델 대사
         </div>
         """
     )
@@ -2634,10 +2926,550 @@ def _(
 
 @app.cell
 def _(
+    calculate_historical_multiple_ranges,
+    calculate_trading_comps_ranges,
+    current_price,
+    management_sensitivity,
+    market_peers,
+    model,
+    prepare_beta_calibration,
+    prepare_football_field_ranges,
+):
+    _wacc_components = model["WACC"]["구성요소"]
+    _target_de = (
+        float(_wacc_components["타인자본 비중"])
+        / float(_wacc_components["자기자본 비중"])
+    )
+    beta_calibration = prepare_beta_calibration(
+        market_peers,
+        _target_de,
+        float(_wacc_components["법인세율"]),
+    )
+    trading_ranges = calculate_trading_comps_ranges(model, market_peers)
+    historical_ranges = calculate_historical_multiple_ranges(model)
+    _dcf_values = [
+        value
+        for row in management_sensitivity["주당 내재가치"]
+        for value in row
+    ]
+    football_ranges = prepare_football_field_ranges(
+        _dcf_values,
+        trading_ranges,
+        historical_ranges,
+        current_price,
+    )
+    return beta_calibration, football_ranges, historical_ranges, trading_ranges
+
+
+@app.cell
+def _(mo):
+    reverse_margin = mo.ui.slider(
+        start=12.0,
+        stop=22.0,
+        step=0.1,
+        value=16.2,
+        label="2030 정상 영업이익률 (%)",
+        include_input=True,
+        full_width=True,
+    )
+    reverse_asset_realization = mo.ui.slider(
+        start=0,
+        stop=100,
+        step=5,
+        value=0,
+        label="비영업자산 가치인식률 (%)",
+        include_input=True,
+        full_width=True,
+    )
+    return reverse_asset_realization, reverse_margin
+
+
+@app.cell
+def _(
+    current_price,
+    model,
+    reverse_asset_realization,
+    reverse_margin,
+    solve_reverse_dcf_growth,
+):
+    _selected_margin = float(reverse_margin.value) / 100
+    _selected_realization = float(reverse_asset_realization.value) / 100
+    reverse_result = solve_reverse_dcf_growth(
+        model,
+        current_price,
+        _selected_margin,
+        _selected_realization,
+    )
+    reverse_tradeoff = []
+    for _margin_percent in range(120, 221, 5):
+        _margin = _margin_percent / 1_000
+        try:
+            _point = solve_reverse_dcf_growth(
+                model,
+                current_price,
+                _margin,
+                _selected_realization,
+            )
+        except ValueError:
+            continue
+        reverse_tradeoff.append(
+            {
+                "margin": _margin,
+                "growth": _point["revenue_cagr"],
+            }
+        )
+    return reverse_result, reverse_tradeoff
+
+
+@app.cell
+def _(
+    COLORS,
+    apply_chart_style,
+    current_price,
+    football_ranges,
+    go,
+    market_peers,
+    model,
+    reverse_result,
+    reverse_tradeoff,
+):
+    _multiple_specs = [
+        ("EV/EBITDA", "ev_ebitda"),
+        ("EV/EBIT", "ev_ebit"),
+        ("P/E", "pe"),
+    ]
+    _forecast_2026 = model["전망"][0]
+    _equity_context = model["지분가치"]
+    _market_equity_value = (
+        current_price * float(_equity_context["유통주식수(백만주)"])
+    )
+    _equity_bridge = float(_equity_context["지분가치"]) - float(
+        model["DCF"]["기업가치"]
+    )
+    _market_enterprise_value = _market_equity_value - _equity_bridge
+    _orion_peer = {
+        "company": "오리온(평가대상)",
+        "ticker": "271560",
+        "region": "한국",
+        "fiscal_period": "FY2026E",
+        "reference_date": "현재 주가 125,000원 기준",
+        "comparison_note": "평가대상 · 현재 주가 기준",
+        "ev_ebitda": _market_enterprise_value
+        / (float(_forecast_2026["EBIT"]) + float(_forecast_2026["D&A"])),
+        "ev_ebit": _market_enterprise_value / float(_forecast_2026["EBIT"]),
+        "pe": _market_equity_value / float(_forecast_2026["NOPAT"]),
+    }
+    _domestic_peers = [peer for peer in market_peers if peer["region"] == "한국"]
+    _overseas_peers = [peer for peer in market_peers if peer["region"] != "한국"]
+    _chart_peers = [*_domestic_peers, _orion_peer, *_overseas_peers]
+    _peer_names = [str(peer["company"]) for peer in _chart_peers]
+    _multiple_colors = [COLORS["blue"], COLORS["teal"], COLORS["gold"]]
+    peer_multiples_fig = go.Figure()
+    for (_multiple, _field), _color in zip(
+        _multiple_specs,
+        _multiple_colors,
+        strict=True,
+    ):
+        peer_multiples_fig.add_trace(
+            go.Bar(
+                x=_peer_names,
+                y=[float(peer[_field]) for peer in _chart_peers],
+                name=_multiple,
+                marker=dict(
+                    color=_color,
+                    line=dict(
+                        color=[
+                            COLORS["orange"]
+                            if peer is _orion_peer
+                            else _color
+                            for peer in _chart_peers
+                        ],
+                        width=[
+                            3 if peer is _orion_peer else 0
+                            for peer in _chart_peers
+                        ],
+                    ),
+                    pattern=dict(
+                        shape=[
+                            "/" if peer is _orion_peer else ""
+                            for peer in _chart_peers
+                        ]
+                    ),
+                ),
+                text=[f"{float(peer[_field]):.1f}x" for peer in _chart_peers],
+                textposition="outside",
+                textfont=dict(size=13, color=COLORS["ink"]),
+                cliponaxis=False,
+                customdata=[
+                    [
+                        peer["ticker"],
+                        peer["region"],
+                        peer["fiscal_period"],
+                        peer["reference_date"],
+                        peer.get("comparison_note", "비교기업 · 저장 시점 자료"),
+                    ]
+                    for peer in _chart_peers
+                ],
+                hovertemplate=(
+                    "<b>%{x}</b> · %{customdata[0]}<br>"
+                    "국가 %{customdata[1]} · 기준연도 %{customdata[2]}<br>"
+                    + _multiple + " %{y:.1f}x<br>"
+                    "%{customdata[4]}<br>"
+                    "자료 기준일 %{customdata[3]}<extra></extra>"
+                ),
+            )
+        )
+    _domestic_count = len(_domestic_peers) + 1
+    if 0 < _domestic_count < len(_chart_peers):
+        peer_multiples_fig.add_vline(
+            x=_domestic_count - 0.5,
+            line_color="#94A3B8",
+            line_dash="dot",
+            line_width=1,
+        )
+    peer_multiples_fig.update_layout(
+        title=(
+            "<b>Trading Comps 배수 비교</b>"
+            "<br><sup>국내외 식품기업 FY2026E 시장배수</sup>"
+        ),
+        barmode="group",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0),
+        margin=dict(t=110, b=90, l=70, r=30),
+    )
+    peer_multiples_fig.update_xaxes(title="비교기업", tickfont=dict(size=13))
+    peer_multiples_fig.update_yaxes(title="시장배수 (x)", tickfont=dict(size=13))
+    peer_multiples_fig = apply_chart_style(peer_multiples_fig, height=460)
+    peer_multiples_fig.update_layout(
+        title_font=dict(size=20),
+        legend_font=dict(size=13),
+    )
+    peer_multiples_fig.update_xaxes(
+        tickfont=dict(size=13),
+        title_font=dict(size=14),
+    )
+    peer_multiples_fig.update_yaxes(
+        tickfont=dict(size=13),
+        title_font=dict(size=14),
+    )
+
+    _football_colors = {
+        "DCF": COLORS["blue"],
+        "Trading Comps": COLORS["teal"],
+        "Historical": COLORS["gold"],
+        "Market": COLORS["orange"],
+    }
+    _method_labels = {
+        "DCF Sensitivity": "DCF 민감도",
+        "Trading EV/EBITDA": "Trading Comps EV/EBITDA",
+        "Trading EV/EBIT": "Trading Comps EV/EBIT",
+        "Trading P/E": "Trading Comps P/E",
+        "Historical Multiple": "과거 시장배수",
+        "Current Price": "현재 주가",
+    }
+    football_field_fig = go.Figure()
+    for _row in reversed(football_ranges):
+        _method = _method_labels.get(str(_row["method"]), str(_row["method"]))
+        _low = float(_row["low"]) / 1_000
+        _mid = float(_row["mid"]) / 1_000
+        _high = float(_row["high"]) / 1_000
+        _color = _football_colors[str(_row["group"])]
+        if _high > _low:
+            football_field_fig.add_trace(
+                go.Scatter(
+                    x=[_low, _high],
+                    y=[_method, _method],
+                    mode="lines",
+                    line=dict(color=_color, width=12),
+                    hovertemplate=(
+                        f"{_method}<br>"
+                        f"하단 {_low:,.0f}천원 · 상단 {_high:,.0f}천원"
+                        "<extra></extra>"
+                    ),
+                    showlegend=False,
+                )
+            )
+        football_field_fig.add_trace(
+            go.Scatter(
+                x=[_low, _mid, _high] if _high > _low else [_mid],
+                y=[_method, _method, _method] if _high > _low else [_method],
+                mode="markers+text",
+                marker=dict(
+                    color=[_color, "#FFFFFF", _color] if _high > _low else [_color],
+                    line=dict(color=_color, width=3),
+                    size=[7, 12, 7] if _high > _low else [12],
+                    symbol=["circle", "diamond", "circle"] if _high > _low else ["diamond"],
+                ),
+                text=(
+                    [f"{_low:,.0f}", f"{_mid:,.0f}", f"{_high:,.0f}"]
+                    if _high > _low
+                    else [f"{_mid:,.0f}천원"]
+                ),
+                textposition=(
+                    ["bottom left", "top center", "bottom right"]
+                    if _high > _low
+                    else ["middle right"]
+                ),
+                textfont=dict(size=12, color=COLORS["ink"]),
+                hovertemplate=(
+                    f"{_method}<br>"
+                    "내재 주당가치 %{x:,.0f}천원/주<extra></extra>"
+                ),
+                showlegend=False,
+            )
+        )
+    football_field_fig.add_vline(
+        x=current_price / 1_000,
+        line_dash="dot",
+        line_color=COLORS["orange"],
+        line_width=4,
+        annotation_text=f"현재 주가 {current_price / 1_000:,.0f}천원",
+        annotation_position="top right",
+    )
+    football_field_fig.update_layout(
+        title=(
+            "<b>Football Field 가치평가 범위</b>"
+            "<br><sup>DCF·Trading Comps·과거 시장배수 비교 · ◇ 중앙값</sup>"
+        )
+    )
+    football_field_fig.update_xaxes(title="내재 주당가치 (천원/주)")
+    football_field_fig = apply_chart_style(football_field_fig, height=450)
+    football_field_fig.update_layout(title_font=dict(size=20))
+    football_field_fig.update_xaxes(
+        tickfont=dict(size=13),
+        title_font=dict(size=14),
+    )
+    football_field_fig.update_yaxes(tickfont=dict(size=13))
+
+    reverse_tradeoff_fig = go.Figure()
+    reverse_tradeoff_fig.add_trace(
+        go.Scatter(
+            x=[point["margin"] * 100 for point in reverse_tradeoff],
+            y=[point["growth"] * 100 for point in reverse_tradeoff],
+            mode="lines+markers",
+            line=dict(color=COLORS["teal"], width=3),
+            marker=dict(size=5),
+            hovertemplate=(
+                "2030 정상 영업이익률 %{x:.1f}%<br>"
+                "현재 주가 내재 5년 매출 CAGR %{y:.1f}%<br>"
+                f"비영업자산 가치인식률 {reverse_result['non_operating_asset_realization']:.0%}"
+                "<extra></extra>"
+            ),
+            showlegend=False,
+        )
+    )
+    reverse_tradeoff_fig.add_trace(
+        go.Scatter(
+            x=[reverse_result["terminal_ebit_margin"] * 100],
+            y=[reverse_result["revenue_cagr"] * 100],
+            mode="markers",
+            marker=dict(
+                color=COLORS["orange"],
+                size=16,
+                line=dict(color="#FFFFFF", width=2),
+            ),
+            hovertemplate="선택 가정<extra></extra>",
+            showlegend=False,
+        )
+    )
+    reverse_tradeoff_fig.add_hline(
+        y=0,
+        line_dash="dot",
+        line_color="#9AAABD",
+    )
+    reverse_tradeoff_fig.update_layout(
+        title=(
+            "<b>Reverse DCF 내재 가정</b>"
+            "<br><sup>현재 주가와 일치하는 정상 영업이익률–매출 CAGR 조합</sup>"
+        )
+    )
+    reverse_tradeoff_fig.update_xaxes(title="2030 정상 영업이익률 (%)")
+    reverse_tradeoff_fig.update_yaxes(title="현재 주가 내재 5년 매출 CAGR (%)")
+    reverse_tradeoff_fig = apply_chart_style(
+        reverse_tradeoff_fig,
+        height=410,
+    )
+    reverse_tradeoff_fig = reverse_tradeoff_fig.update_layout(
+        title_font=dict(size=20)
+    )
+    reverse_tradeoff_fig = reverse_tradeoff_fig.update_xaxes(
+        tickfont=dict(size=13),
+        title_font=dict(size=14),
+    )
+    reverse_tradeoff_fig = reverse_tradeoff_fig.update_yaxes(
+        tickfont=dict(size=13),
+        title_font=dict(size=14),
+    )
+    return (
+        football_field_fig,
+        peer_multiples_fig,
+        reverse_tradeoff_fig,
+    )
+
+
+@app.cell
+def _(
+    beta_calibration,
+    current_price,
+    football_field_fig,
+    mo,
+    model,
+    peer_multiples_fig,
+    reverse_asset_realization,
+    reverse_margin,
+    reverse_result,
+    reverse_tradeoff_fig,
+):
+    _wacc = model["WACC"]["구성요소"]
+    _calibration_cards = mo.md(
+        f"""
+        <div class="market-grid">
+            <div class="market-card">
+                <div class="market-card-label">비교기업 기준 Relevered Beta</div>
+                <div class="market-card-value">{beta_calibration['relevered_beta']:.2f}</div>
+                <div class="market-card-note">
+                    Unlevered Beta 중앙값 {beta_calibration['median_unlevered_beta']:.2f} → 오리온 목표 D/E 적용
+                </div>
+            </div>
+            <div class="market-card">
+                <div class="market-card-label">무위험수익률</div>
+                <div class="market-card-value">{float(_wacc['무위험수익률']):.1%}</div>
+                <div class="market-card-note">
+                    국고채 10년물 · 한국은행 ECOS · 2025-12-31 기준
+                </div>
+            </div>
+            <div class="market-card">
+                <div class="market-card-label">검증 대상 WACC</div>
+                <div class="market-card-value">{float(model['WACC']['WACC']):.2%}</div>
+                <div class="market-card-note">
+                    ERP {float(_wacc['주식시장위험프리미엄']):.1%} + 국가위험프리미엄 {float(_wacc['국가위험프리미엄']):.1%} 반영
+                </div>
+            </div>
+        </div>
+        """
+    )
+    _reverse_summary = mo.md(
+        f"""
+        <div class="challenge-panel">
+            <div class="challenge-panel-head">
+                <div>
+                    <div class="fcff-panel-title">Reverse DCF 결과 요약</div>
+                    <div class="challenge-panel-caption">
+                        선택한 정상 영업이익률에 대응하는 매출 CAGR을 계산합니다.
+                    </div>
+                </div>
+                <span class="reconciled-badge">{reverse_result['reconciliation_status']}</span>
+            </div>
+            <div class="challenge-conclusion">
+                현재 주가 {current_price:,.0f}원은 비영업자산 가치인식률
+                {reverse_result['non_operating_asset_realization']:.0%}를 전제로 할 때,
+                향후 5년 매출 CAGR <strong>{reverse_result['revenue_cagr']:.1%}</strong>와
+                <strong>{reverse_result['terminal_ebit_margin']:.1%}</strong>의 정상 영업이익률을
+                전제합니다.<br><br>
+                이는 유일한 해답이 아니라 현재 주가를 설명하는 등가 조합입니다. 따라서
+                성장률이 낮아질수록 더 높은 수익성이 요구되고, 수익성이 낮아질수록 더 높은
+                성장이 요구됩니다.
+            </div>
+        </div>
+        """
+    )
+    _reverse_controls = mo.vstack(
+        [
+            mo.md(
+                """
+                <div class="fcff-panel-title">Reverse DCF 입력 가정</div>
+                <div class="fcff-panel-caption">
+                    정상 영업이익률과 비영업자산 가치인식률을 조정합니다.
+                </div>
+                """
+            ),
+            reverse_margin,
+            reverse_asset_realization,
+        ],
+        gap=0.5,
+    )
+    _reverse_concept = mo.md(
+        """
+        <div class="reverse-concept">
+            <div class="market-section-title">Reverse DCF 입력 가정 및 결과</div>
+            <div class="market-section-copy">
+                Reverse DCF는 목표주가를 산출하는 분석이 아니라, 현재 주가와 일치하도록
+                미래 영업가정을 역으로 계산하는 분석입니다. 하나의 주가만으로 성장률과
+                수익성을 동시에 확정할 수 없으므로, 선택한 정상 영업이익률을 고정한 뒤
+                이에 대응하는 매출 CAGR을 계산합니다.
+            </div>
+        </div>
+        """
+    )
+    market_calibration_body = mo.vstack(
+        [
+            mo.md(
+                """
+                <div class="market-section">
+                    <div class="market-section-title">시장가치 교차검증 핵심 가정</div>
+                    <div class="market-section-copy">
+                        비교기업 Beta와 시장 입력자료를 이용해 DCF의 WACC 가정을 간결하게 검증합니다.
+                    </div>
+                </div>
+                """
+            ),
+            _calibration_cards,
+            mo.md(
+                """
+                <div class="market-section">
+                    <div class="market-section-title">Trading Comps</div>
+                    <div class="market-section-copy">
+                        국내외 식품기업의 FY2026E EV/EBITDA, EV/EBIT, P/E를 같은 축에서 비교합니다.
+                    </div>
+                </div>
+                """
+            ),
+            mo.ui.plotly(peer_multiples_fig),
+            mo.md(
+                """
+                <div class="market-section">
+                    <div class="market-section-title">Football Field 가치평가 범위</div>
+                    <div class="market-section-copy">
+                        DCF, Trading Comps, 과거 시장배수의 가치평가 범위를 현재 주가와 비교합니다.
+                    </div>
+                </div>
+                """
+            ),
+            mo.ui.plotly(football_field_fig),
+            _reverse_concept,
+            mo.hstack(
+                [_reverse_controls, _reverse_summary],
+                widths=[0.28, 0.72],
+                gap=1,
+                align="stretch",
+                wrap=True,
+            ),
+            mo.ui.plotly(reverse_tradeoff_fig),
+            mo.md(
+                """
+                <div class="market-section">
+                    <div class="market-section-title">출처 및 산정 기준</div>
+                    <div class="market-warning">
+                        Trading Comps는 MarketScreener FY2026E 저장 시점 자료, 무위험수익률은
+                        한국은행 ECOS, ERP·국가위험프리미엄은 Damodaran 자료를 사용했습니다.
+                        P/E는 2026E NOPAT을 정규화 이익 대용치로 사용했으며 보고서 발행 전 동일
+                        공급자·관측주기로 재대사해야 합니다.
+                    </div>
+                </div>
+                """
+            ),
+        ],
+        gap=0.75,
+    )
+    return (market_calibration_body,)
+
+
+@app.cell
+def _(
     dashboard_css,
     executive_top,
     fcff_waterfall_row,
     formula_explorer_section,
+    market_calibration_body,
     mo,
     overview_visuals,
     sensitivity_chapter_body,
@@ -2661,7 +3493,7 @@ def _(
                     <div class="chapter-title">계산구조</div>
                     <div class="chapter-copy">
                         매출액에서 EBIT·NOPAT·FCFF를 거쳐 기업가치와
-                        주당 내재가치에 도달하는 계산 구조를 검증합니다.
+                        Implied Share Price에 도달하는 계산 구조를 검증합니다.
                     </div>
                 </div>
                 """
@@ -2680,11 +3512,13 @@ def _(
             mo.md(
                 """
                 <div class="chapter-intro">
-                    <div class="chapter-kicker">INDEPENDENT REVIEW</div>
-                    <div class="chapter-title">민감도 분석</div>
+                    <div class="chapter-kicker">ACCOUNTING ESTIMATES REVIEW</div>
+                    <div class="chapter-title">민감도 분석 &amp; 회계추정치</div>
                     <div class="chapter-copy">
-                        경영진 주장과 감사인의 전문가적 판단을 분리하고,
-                        방법·가정·데이터의 변화가 가치범위에 미치는 영향을 검토합니다.
+                        회계추정에 사용된 방법·가정·데이터의 적합성을 검토하고, 경영진의
+                        점추정치와 감사인의 범위추정치를 비교합니다. 추정불확실성과 잠재
+                        왜곡표시를 식별하며 WACC·영구성장률·매출 성장률·영업이익률 변화가
+                        가치평가 결론에 미치는 영향을 분석합니다.
                     </div>
                     <div class="standard-inline" style="margin-top: 6px;">
                         <strong>감사기준서 540 · A118</strong> — “경영진의 점추정치와
@@ -2699,6 +3533,26 @@ def _(
         gap=1.1,
     )
 
+    market_calibration_page = mo.vstack(
+        [
+            dashboard_css,
+            mo.md(
+                """
+                <div class="chapter-intro">
+                    <div class="chapter-kicker">시장가치 검증</div>
+                    <div class="chapter-title">시장가치 교차검증</div>
+                    <div class="chapter-copy">
+                        DCF·Trading Comps·과거 시장배수의 가치평가 범위를 비교하고,
+                        Reverse DCF를 통해 현재 주가에 내재된 성장률과 정상 영업이익률을 확인합니다.
+                    </div>
+                </div>
+                """
+            ),
+            market_calibration_body,
+        ],
+        gap=1.1,
+    )
+
     dashboard_chapters = mo.ui.tabs(
         {
             "1. 가치평가 개요": mo.lazy(
@@ -2709,8 +3563,12 @@ def _(
                 calculation_structure_page,
                 show_loading_indicator=True,
             ),
-            "3. 민감도 분석": mo.lazy(
+            "3. 민감도 분석 & 회계추정치": mo.lazy(
                 sensitivity_analysis_page,
+                show_loading_indicator=True,
+            ),
+            "4. 시장가치 검증": mo.lazy(
+                market_calibration_page,
                 show_loading_indicator=True,
             ),
         }

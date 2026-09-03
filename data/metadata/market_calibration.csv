@@ -1,0 +1,7 @@
+company,ticker,region,fiscal_period,ev_ebitda,ev_ebit,pe,levered_beta,debt_to_equity,multiple_source,beta_source,beta_quality,reference_date
+롯데웰푸드,280360 KS,한국,FY2026E,5.00,9.94,9.83,0.56,0.45,https://www.marketscreener.com/quote/stock/LOTTE-WELLFOOD-CO-LTD-38743169/valuation/,5Y monthly market beta screening input,illustrative-refresh-required,2026-08-25
+농심,004370 KS,한국,FY2026E,4.04,6.24,13.40,0.47,0.10,https://www.marketscreener.com/quote/stock/NONGSHIM-CO-LTD-6491579/valuation/,5Y monthly market beta screening input,illustrative-refresh-required,2026-08-31
+Mondelez,MDLZ US,미국,FY2026E,15.20,19.20,20.40,0.53,0.75,https://www.marketscreener.com/quote/stock/MONDELEZ-INTERNATIONAL-IN-103502345/valuation/,5Y monthly market beta screening input,illustrative-refresh-required,2026-08-31
+Hershey,HSY US,미국,FY2026E,13.50,16.20,22.00,0.35,1.80,https://www.marketscreener.com/quote/stock/THE-HERSHEY-COMPANY-12988/valuation/,5Y monthly market beta screening input,illustrative-refresh-required,2026-08-31
+Nestle,NESN SW,스위스,FY2026E,14.10,17.20,20.70,0.49,1.10,https://www.marketscreener.com/quote/stock/NESTLE-S-A-3716975/valuation/,5Y monthly market beta screening input,illustrative-refresh-required,2026-08-31
+Ajinomoto,2802 JP,일본,FY2026E,15.70,26.20,31.80,0.62,0.35,https://www.marketscreener.com/quote/stock/AJINOMOTO-CO-INC-136967997/valuation/,5Y monthly market beta screening input,illustrative-refresh-required,2026-05-07

@@ -294,6 +294,12 @@ def run_orion_dcf(
     equity_result["기준주가"] = historical["F68"].value
 
     return {
+        "기준연도": {
+            "연도": 2025,
+            "매출액": historical["F7"].value,
+            "EBIT": historical["F12"].value,
+            "D&A": historical["F27"].value,
+        },
         "지역별 매출액": segment_forecasts,
         "전망": forecast_results,
         "WACC": wacc_result,
