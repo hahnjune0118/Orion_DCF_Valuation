@@ -148,10 +148,18 @@ def test_equity_bridge_sign_rules_and_details_are_explicit(model):
     result = prepare_formula_explorer_data(model, "지분가치")
     details = result["계산 세부"]
 
-    assert "비영업자산은 가산" in result["부호규칙"]
-    assert "금융부채" in result["부호규칙"]
-    assert "리스부채" in result["부호규칙"]
-    assert "비지배지분" in result["부호규칙"]
+    sign_rule = result["부호규칙"]
+    for token in (
+        "Cash-like",
+        "비영업자산",
+        "적용 NWC 조정",
+        "가산",
+        "Debt-like",
+        "비지배지분",
+        "차감",
+    ):
+        assert token in sign_rule
+    assert "리스부채" in details
     assert details["금융기관차입금"] == pytest.approx(
         model["지분가치"]["금융기관차입금"]
     )
@@ -185,19 +193,18 @@ def test_formula_explorer_does_not_mutate_model_or_forecast(model):
     assert model["전망"] == original_forecast
 
 
-def test_existing_baseline_values_remain_unchanged(model):
-    baseline_before = SNAPSHOT_PATH.read_bytes()
-    baseline = json.loads(baseline_before.decode("utf-8"))["model_outputs"]
+def test_formula_explorer_preserves_current_fdd_model(model):
+    original_model = deepcopy(model)
 
     for stage in ("FCFF", "WACC", "DCF", "지분가치", "주당 내재가치"):
         year = 2026 if stage == "FCFF" else None
         prepare_formula_explorer_data(model, stage, year)
 
-    assert SNAPSHOT_PATH.read_bytes() == baseline_before
-    assert model["전망"] == baseline["전망"]
-    assert model["WACC"]["WACC"] == baseline["WACC"]["WACC"]
-    assert model["DCF"]["기업가치"] == baseline["DCF"]["기업가치"]
-    assert model["지분가치"]["지분가치"] == baseline["지분가치"]["지분가치"]
-    assert model["지분가치"]["주당 내재가치"] == baseline["지분가치"][
-        "주당 내재가치"
-    ]
+    assert model == original_model
+    assert model["DCF"]["기업가치"] == pytest.approx(6_530_454.168, abs=0.001)
+    assert model["지분가치"]["지분가치"] == pytest.approx(
+        9_415_024.166, abs=0.001
+    )
+    assert model["지분가치"]["주당 내재가치"] == pytest.approx(
+        238_181.453, abs=0.001
+    )

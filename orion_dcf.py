@@ -8,6 +8,7 @@ from cash_flow_model import (
 )
 from equity_bridge import calculate_equity_bridge
 from fcff_model import calculate_fcff
+from fdd_model import extract_fdd_inputs
 from forecast_model import (
     calculate_operating_profit,
     forecast_segment_revenue,
@@ -43,6 +44,8 @@ def run_orion_dcf(
     wacc_adjustment=0.0,
     terminal_growth_adjustment=0.0,
 ):
+    fdd_inputs = extract_fdd_inputs(excel_path)
+
     workbook = load_workbook(
         excel_path,
         data_only=True,
@@ -77,15 +80,8 @@ def run_orion_dcf(
             )
         )
 
-    # 2. 2025년 기초 NWC
-    previous_nwc = (
-        historical["F39"].value
-        + historical["F40"].value
-        + historical["F41"].value
-        - historical["F56"].value
-        - historical["F57"].value
-        - historical["F58"].value
-    )
+    # 2. FDD Closing NWC를 2026E opening NWC로 사용
+    previous_nwc = fdd_inputs.nwc.closing_nwc
 
     forecast_results = []
 
@@ -119,9 +115,14 @@ def run_orion_dcf(
             + revenue * ebit_margin_adjustment
         )
 
+        pre_fdd_ebit = operating_result["EBIT"]
+        fdd_ebit_adjustment = (
+            fdd_inputs.qoe.forecast_ebit_adjustment[year]
+        )
+        fdd_adjusted_ebit = pre_fdd_ebit + fdd_ebit_adjustment
+
         operating_result["영업이익률"] = (
-            operating_result["영업이익률"]
-            + ebit_margin_adjustment
+            fdd_adjusted_ebit / revenue
         )
 
         nwc_result = calculate_nwc(
@@ -137,9 +138,9 @@ def run_orion_dcf(
             other_operating_asset_ratio=assumptions[
                 f"{col}25"
             ].value,
-            other_operating_liability_ratio=assumptions[
-                f"{col}26"
-            ].value,
+            other_operating_liability_ratio=(
+                fdd_inputs.nwc.other_operating_current_liability_ratio[year]
+            ),
         )
 
         current_nwc = nwc_result["NWC"]
@@ -160,13 +161,23 @@ def run_orion_dcf(
             )
         )
 
+        pre_fdd_depreciation = investment_result["D&A"]
+        fdd_da_adjustment = fdd_inputs.qoe.forecast_da_adjustment[year]
+        fdd_adjusted_depreciation = (
+            pre_fdd_depreciation + fdd_da_adjustment
+        )
+        lease_capex = (
+            revenue * fdd_inputs.qoe.lease_capex_ratio[year]
+        )
+        fdd_adjusted_capex = investment_result["총 Capex"] + lease_capex
+
         fcff_result = calculate_fcff(
-            ebit=operating_result["EBIT"],
+            ebit=fdd_adjusted_ebit,
             tax_rate=assumptions[
                 f"{col}16"
             ].value,
-            depreciation=investment_result["D&A"],
-            capex=investment_result["총 Capex"],
+            depreciation=fdd_adjusted_depreciation,
+            capex=fdd_adjusted_capex,
             change_in_nwc=change_in_nwc,
         )
 
@@ -179,16 +190,25 @@ def run_orion_dcf(
                     segment_revenue["기타 국가"]
                 ),
                 "매출액": revenue,
-                "EBIT": operating_result["EBIT"],
+                "EBIT": fdd_adjusted_ebit,
                 "영업이익률": operating_result[
                     "영업이익률"
                 ],
                 "NWC": current_nwc,
                 "NWC 증감": change_in_nwc,
-                "D&A": investment_result["D&A"],
-                "Capex": investment_result["총 Capex"],
+                "D&A": fdd_adjusted_depreciation,
+                "Capex": fdd_adjusted_capex,
                 "NOPAT": fcff_result["NOPAT"],
                 "FCFF": fcff_result["FCFF"],
+                "FDD 조정 EBIT": fdd_adjusted_ebit,
+                "FDD 조정 D&A": fdd_adjusted_depreciation,
+                "FDD 조정 Capex": fdd_adjusted_capex,
+                "FDD 조정 NWC": current_nwc,
+                "FDD 조정 NWC 증감": change_in_nwc,
+                "FDD 조정 FCFF": fcff_result["FCFF"],
+                "FDD EBIT 조정액": fdd_ebit_adjustment,
+                "FDD D&A 조정액": fdd_da_adjustment,
+                "Lease capex": lease_capex,
             }
         )
 
@@ -252,44 +272,33 @@ def run_orion_dcf(
     dcf_result["명시적 전망기간"] = len(forecast_results)
 
     # 6. 기업가치에서 지분가치로 조정
+    transaction_bridge = fdd_inputs.transaction_bridge
     equity_result = calculate_equity_bridge(
         enterprise_value=dcf_result["기업가치"],
-        cash_and_cash_equivalents=historical[
-            "F35"
-        ].value,
-        revenue=historical["F7"].value,
-        required_operating_cash_ratio=assumptions[
-            "C39"
-        ].value,
-        short_term_financial_instruments=historical[
-            "F36"
-        ].value,
-        current_fvtpl_financial_assets=historical[
-            "F37"
-        ].value,
-        ligachem_market_value=historical["F50"].value,
-        other_associates_and_jvs=(
-            historical["F48"].value
-            - historical["F49"].value
+        cash_like=transaction_bridge.cash_like,
+        debt_like=transaction_bridge.debt_like,
+        non_operating_assets=(
+            transaction_bridge.non_operating_assets
         ),
-        non_current_fvoci_financial_assets=historical[
-            "F51"
-        ].value,
-        investment_property_fair_value=historical[
-            "F46"
-        ].value,
-        financial_debt=historical["F53"].value,
-        lease_liabilities=(
-            historical["F54"].value
-            + historical["F55"].value
+        non_controlling_interests=(
+            transaction_bridge.non_controlling_interests
         ),
-        non_controlling_interests=historical[
-            "F59"
-        ].value,
+        applied_nwc_price_adjustment=(
+            transaction_bridge.applied_nwc_price_adjustment
+        ),
         shares_outstanding_millions=(
             historical["F67"].value / 1_000_000
         ),
         current_share_price=historical["F68"].value,
+        cash_like_components=(
+            transaction_bridge.cash_like_components
+        ),
+        debt_like_components=(
+            transaction_bridge.debt_like_components
+        ),
+        non_operating_asset_components=(
+            transaction_bridge.non_operating_asset_components
+        ),
     )
     equity_result["기준주가"] = historical["F68"].value
 
@@ -305,6 +314,7 @@ def run_orion_dcf(
         "WACC": wacc_result,
         "DCF": dcf_result,
         "지분가치": equity_result,
+        "FDD": fdd_inputs.to_model_dict(),
     }
 
 

@@ -150,9 +150,17 @@ def test_equity_value_reconciles_and_sign_convention_is_explicit(model):
         inputs["기업가치"] + inputs["순비영업 조정액"]
     )
     assert result["모델값"] == pytest.approx(model["지분가치"]["지분가치"])
-    assert "비영업자산은 가산" in result["부호규칙"]
-    assert "리스부채" in result["부호규칙"]
-    assert "비지배지분" in result["부호규칙"]
+    sign_rule = result["부호규칙"]
+    for token in (
+        "Cash-like",
+        "비영업자산",
+        "적용 NWC 조정",
+        "가산",
+        "Debt-like",
+        "비지배지분",
+        "차감",
+    ):
+        assert token in sign_rule
     assert result["대사상태"] == "PASS"
 
 
@@ -183,7 +191,7 @@ def test_display_unit_conversion_uses_source_precision(model):
     assert result["표시 입력값"]["NOPAT"] == pytest.approx(
         result["원본 입력값"]["NOPAT"] / 1_000
     )
-    assert result["재계산값"] == pytest.approx(286462.6575452737)
+    assert result["재계산값"] == pytest.approx(269051.0747696138)
     assert result["표시 단위"] == "십억원"
 
 
@@ -242,20 +250,18 @@ def test_formula_preparation_does_not_mutate_model(model, stage, year):
     assert model == original
 
 
-def test_baseline_json_file_and_core_outputs_are_unchanged(model, baseline):
-    baseline_bytes_before = SNAPSHOT_PATH.read_bytes()
+def test_formula_explorer_preserves_current_fdd_baseline(model):
+    original = deepcopy(model)
 
     prepare_formula_explorer_data(model, "FCFF", 2026)
     prepare_formula_explorer_data(model, "DCF")
     prepare_formula_explorer_data(model, "주당 내재가치")
 
-    assert SNAPSHOT_PATH.read_bytes() == baseline_bytes_before
-    expected = baseline["model_outputs"]
-
-    assert model["전망"] == expected["전망"]
-    assert model["WACC"]["WACC"] == expected["WACC"]["WACC"]
-    assert model["DCF"]["기업가치"] == expected["DCF"]["기업가치"]
-    assert model["지분가치"]["지분가치"] == expected["지분가치"]["지분가치"]
-    assert model["지분가치"]["주당 내재가치"] == expected["지분가치"][
-        "주당 내재가치"
-    ]
+    assert model == original
+    assert model["DCF"]["기업가치"] == pytest.approx(6_530_454.168, abs=0.001)
+    assert model["지분가치"]["지분가치"] == pytest.approx(
+        9_415_024.166, abs=0.001
+    )
+    assert model["지분가치"]["주당 내재가치"] == pytest.approx(
+        238_181.453, abs=0.001
+    )

@@ -1,5 +1,4 @@
 import hashlib
-import json
 from pathlib import Path
 
 import pytest
@@ -9,14 +8,25 @@ from orion_dcf import run_orion_dcf
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 EXCEL_PATH = PROJECT_ROOT / "data" / "raw" / "orion_dcf.xlsx"
-SNAPSHOT_PATH = (
-    PROJECT_ROOT / "artifacts" / "baseline" / "model_snapshot.json"
+
+# Phase 1 validated FDD workbook copied into data/raw/orion_dcf.xlsx.
+EXPECTED_WORKBOOK_SHA256 = (
+    "f4015e03f47c116c04d51b032d1f1021c7a7186492bac56b4130713303b0251d"
 )
-
-
-@pytest.fixture(scope="module")
-def baseline():
-    return json.loads(SNAPSHOT_PATH.read_text(encoding="utf-8"))
+EXPECTED_WACC = 0.09477625
+EXPECTED_FCFF = {
+    2026: 269_051.075,
+    2027: 318_693.548,
+    2028: 532_375.101,
+    2029: 535_014.336,
+    2030: 562_920.607,
+}
+EXPECTED_DCF = {
+    "추정기간 FCFF 현재가치": 1_647_790.600,
+    "기업가치": 6_530_454.168,
+}
+EXPECTED_EQUITY_VALUE = 9_415_024.166
+EXPECTED_VALUE_PER_SHARE = 238_181.453
 
 
 @pytest.fixture(scope="module")
@@ -32,92 +42,46 @@ def _sha256(path):
     return digest.hexdigest()
 
 
-def _assert_close(actual, expected, tolerance, relative):
-    assert actual == pytest.approx(
-        expected,
-        abs=tolerance,
-        rel=relative,
+def test_fdd_baseline_input_fingerprint_is_current():
+    assert _sha256(EXCEL_PATH) == EXPECTED_WORKBOOK_SHA256
+    assert EXCEL_PATH.stat().st_size > 0
+
+
+def test_fdd_baseline_forecast_is_current(current_model):
+    rows = current_model["전망"]
+    assert [row["연도"] for row in rows] == [2026, 2027, 2028, 2029, 2030]
+
+    fdd_required_keys = {
+        "FDD 조정 EBIT",
+        "FDD 조정 D&A",
+        "FDD 조정 Capex",
+        "FDD 조정 NWC",
+        "FDD 조정 NWC 증감",
+        "FDD 조정 FCFF",
+        "FDD EBIT 조정액",
+        "FDD D&A 조정액",
+        "Lease capex",
+    }
+    for row in rows:
+        year = row["연도"]
+        assert fdd_required_keys <= row.keys()
+        assert row["FCFF"] == pytest.approx(EXPECTED_FCFF[year], abs=0.001)
+        assert row["FCFF"] == pytest.approx(row["FDD 조정 FCFF"], abs=1e-6)
+
+
+def test_fdd_baseline_valuation_is_current(current_model):
+    assert current_model["WACC"]["WACC"] == pytest.approx(
+        EXPECTED_WACC, abs=1e-12
     )
-
-
-def test_baseline_input_fingerprint_is_unchanged(baseline):
-    expected = baseline["input_files"]["data/raw/orion_dcf.xlsx"]
-    assert _sha256(EXCEL_PATH) == expected["sha256"]
-    assert EXCEL_PATH.stat().st_size == expected["size_bytes"]
-
-
-def test_baseline_forecast_is_unchanged(baseline, current_model):
-    expected_rows = baseline["model_outputs"]["전망"]
-    actual_rows = current_model["전망"]
-    tolerances = baseline["tolerances"]
-
-    assert [row["연도"] for row in actual_rows] == [
-        2026,
-        2027,
-        2028,
-        2029,
-        2030,
-    ]
-    assert len(actual_rows) == len(expected_rows)
-
-    for actual, expected in zip(actual_rows, expected_rows, strict=True):
-        assert actual.keys() == expected.keys()
-        for key in actual:
-            if key == "연도":
-                assert actual[key] == expected[key]
-                continue
-            tolerance = (
-                tolerances["rate_absolute"]
-                if key == "영업이익률"
-                else tolerances["amount_million_krw_absolute"]
-            )
-            _assert_close(
-                actual[key],
-                expected[key],
-                tolerance,
-                tolerances["relative"],
-            )
-
-
-def test_baseline_valuation_is_unchanged(baseline, current_model):
-    expected = baseline["model_outputs"]
-    tolerances = baseline["tolerances"]
-    relative = tolerances["relative"]
-
-    _assert_close(
-        current_model["WACC"]["WACC"],
-        expected["WACC"]["WACC"],
-        tolerances["rate_absolute"],
-        relative,
+    assert current_model["DCF"]["추정기간 FCFF 현재가치"] == pytest.approx(
+        EXPECTED_DCF["추정기간 FCFF 현재가치"], abs=0.001
     )
-
-    for key in [
-        "추정기간 FCFF 현재가치",
-        "계속기업가치 현재가치",
-        "기업가치",
-    ]:
-        _assert_close(
-            current_model["DCF"][key],
-            expected["DCF"][key],
-            tolerances["amount_million_krw_absolute"],
-            relative,
-        )
-
-    _assert_close(
-        current_model["DCF"]["계속기업가치 비중"],
-        expected["DCF"]["계속기업가치 비중"],
-        tolerances["rate_absolute"],
-        relative,
+    assert current_model["DCF"]["기업가치"] == pytest.approx(
+        EXPECTED_DCF["기업가치"], abs=0.001
     )
-    _assert_close(
-        current_model["지분가치"]["지분가치"],
-        expected["지분가치"]["지분가치"],
-        tolerances["amount_million_krw_absolute"],
-        relative,
+    assert current_model["지분가치"]["지분가치"] == pytest.approx(
+        EXPECTED_EQUITY_VALUE, abs=0.001
     )
-    _assert_close(
-        current_model["지분가치"]["주당 내재가치"],
-        expected["지분가치"]["주당 내재가치"],
-        tolerances["per_share_krw_absolute"],
-        relative,
+    assert current_model["지분가치"]["주당 내재가치"] == pytest.approx(
+        EXPECTED_VALUE_PER_SHARE, abs=0.001
     )

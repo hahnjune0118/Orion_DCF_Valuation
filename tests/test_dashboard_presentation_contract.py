@@ -13,26 +13,29 @@ def test_company_identity_and_market_are_presented_in_executive_view():
 
 
 def test_adjustment_sliders_accept_direct_numeric_input():
-    assert DASHBOARD_SOURCE.count("include_input=True") == 10
+    assert DASHBOARD_SOURCE.count("include_input=True") == 13
     assert "Revenue CAGR 조정 (%p)" in DASHBOARD_SOURCE
     assert "EBIT Margin 조정 (%p)" in DASHBOARD_SOURCE
     assert "WACC 조정 (%p)" in DASHBOARD_SOURCE
-    assert "Terminal Growth Rate 조정 (%p)" in DASHBOARD_SOURCE
+    assert "영구성장률 조정 (%p)" in DASHBOARD_SOURCE
     assert "2030 정상 영업이익률 (%)" in DASHBOARD_SOURCE
     assert "비영업자산 가치인식률 (%)" in DASHBOARD_SOURCE
+    assert "리가켐바이오 인정률 (%)" in DASHBOARD_SOURCE
+    assert "단기금융상품 Cash-like 인정률 (%)" in DASHBOARD_SOURCE
+    assert "NWC 가격조정 적용률 (%)" in DASHBOARD_SOURCE
 
 
 def test_professional_audit_terms_and_standard_reference_are_visible():
-    assert "경영진 주장 vs 감사인의 전문가적 판단" in DASHBOARD_SOURCE
+    assert "시나리오 및 주요 가정 검토" in DASHBOARD_SOURCE
+    assert "기준 시나리오 vs 독립 가치평가 범위" in DASHBOARD_SOURCE
     assert "감사기준서 540" in DASHBOARD_SOURCE
-    assert "문단 28" in DASHBOARD_SOURCE
-    assert "A118" in DASHBOARD_SOURCE
+    assert "문단 29(a)" in DASHBOARD_SOURCE
     assert "A121" in DASHBOARD_SOURCE
     assert "A124" in DASHBOARD_SOURCE
     assert "A139" in DASHBOARD_SOURCE
     assert "감사기준서 450 · A6" in DASHBOARD_SOURCE
     assert "왜곡표시 금액" in DASHBOARD_SOURCE
-    assert "감사인 범위추정치 민감도" in DASHBOARD_SOURCE
+    assert "독립 가치평가 범위 · DOWNSIDE CASE" in DASHBOARD_SOURCE
     assert "한국공인회계사회 원문" in DASHBOARD_SOURCE
     assert "Management Case 민감도" not in DASHBOARD_SOURCE
     assert "감사인 독립검토 Case 민감도" not in DASHBOARD_SOURCE
@@ -72,7 +75,7 @@ def test_sensitivity_page_is_compact_and_omits_redundant_scenario_chart():
     assert "scenario_view =" not in DASHBOARD_SOURCE
     assert "[sensitivity_view, auditor_range_sensitivity_view]" not in DASHBOARD_SOURCE
     assert "widths=[0.25, 0.40, 0.35]" in DASHBOARD_SOURCE
-    assert "감사기준서 540 · 문단 28" in DASHBOARD_SOURCE
+    assert "감사기준서 540 · 문단 29(a)" in DASHBOARD_SOURCE
     assert "감사기준서 540 · A121" in DASHBOARD_SOURCE
     assert "font-size: 13px" in DASHBOARD_SOURCE
 
@@ -107,12 +110,12 @@ def test_market_calibration_page_contains_deal_valuation_workflow():
     assert all(label not in DASHBOARD_SOURCE for label in forbidden_labels)
 
 
-def test_accounting_estimates_page_uses_requested_audit_hierarchy():
-    assert "3. 민감도 분석 & 회계추정치" in DASHBOARD_SOURCE
-    assert "ACCOUNTING ESTIMATES REVIEW" in DASHBOARD_SOURCE
-    assert "민감도 분석 &amp; 회계추정치" in DASHBOARD_SOURCE
-    assert "경영진의\n                        점추정치와 감사인의 범위추정치" in DASHBOARD_SOURCE
-    assert "추정불확실성과 잠재\n                        왜곡표시" in DASHBOARD_SOURCE
+def test_scenario_page_uses_current_ib_review_hierarchy():
+    assert "3. 시나리오 및 주요 가정 검토" in DASHBOARD_SOURCE
+    assert '<div class="chapter-kicker">시나리오 분석</div>' in DASHBOARD_SOURCE
+    assert '<div class="chapter-title">시나리오 및 주요 가정 검토</div>' in DASHBOARD_SOURCE
+    assert "기준 시나리오와 독립 가치평가 범위를 비교해 주요 가정의 위험" in DASHBOARD_SOURCE
+    assert "WACC·영구성장률·매출 CAGR·EBIT Margin" in DASHBOARD_SOURCE
 
 
 def test_market_page_has_three_decision_charts_and_responsive_contract():
