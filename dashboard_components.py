@@ -23,6 +23,7 @@ WATERFALL_DECREASE_COLOR = "#E07A5F"
 FCFF_RECONCILIATION_TOLERANCE = 1e-6
 SUPPORTED_FORECAST_YEARS = frozenset(range(2026, 2031))
 FORMULA_RECONCILIATION_TOLERANCE = 1e-6
+FDD_RECONCILIATION_TOLERANCE = 1e-6
 SUPPORTED_FORMULA_STAGES = (
     "매출액",
     "EBIT",
@@ -545,9 +546,13 @@ def build_valuation_formula_catalog() -> dict[str, dict[str, object]]:
         },
         "지분가치": {
             "경제적 의미": "기업가치에 순비영업 조정액을 반영한 지배기업 보통주주 귀속 가치",
-            "기호 수식": r"Equity\ Value = EV + Net\ Nonoperating\ Adjustment",
+            "기호 수식": (
+                r"Equity\ Value = EV + CashLike - DebtLike + "
+                r"Nonoperating\ Assets - NCI + NWC\ Adjustment"
+            ),
             "부호규칙": (
-                "비영업자산은 가산; 금융부채·리스부채·비지배지분은 차감"
+                "Cash-like·비영업자산·적용 NWC 조정은 가산; "
+                "Debt-like·비지배지분은 차감"
             ),
             "데이터 출처 또는 모델 경로": (
                 "model['DCF']['기업가치']; model['지분가치']"
@@ -910,8 +915,20 @@ def prepare_formula_explorer_data(
             model_unit=MODEL_UNIT,
             display_unit="조원",
             details={
+                "Cash-like 자산": _required_value(
+                    equity, "Cash-like 자산", "model['지분가치']"
+                ),
+                "Debt-like 항목": _required_value(
+                    equity, "Debt-like 항목", "model['지분가치']"
+                ),
+                "순현금": _required_value(
+                    equity, "순현금", "model['지분가치']"
+                ),
                 "비영업자산 합계": _required_value(
                     equity, "비영업자산 합계", "model['지분가치']"
+                ),
+                "적용 NWC 가격조정": _required_value(
+                    equity, "적용 NWC 가격조정", "model['지분가치']"
                 ),
                 "리스부채": _required_value(
                     equity, "리스부채", "model['지분가치']"
@@ -1458,3 +1475,748 @@ def build_auditor_range_conclusion(
         f"{position}. 본 범위는 충분하고 적합한 감사증거의 확보 여부를 "
         "전제로 한 가정 검토 시뮬레이션이며 감사의견이 아닙니다."
     )
+
+
+def _fdd_value(mapping: Mapping[str, object], key: str, path: str) -> float:
+    if key not in mapping:
+        raise KeyError(f"FDD 표시 필수 입력 누락: {path}['{key}']")
+    return _finite_number(mapping, key)
+
+
+def _fdd_optional_number(
+    mapping: Mapping[str, object],
+    keys: Sequence[str],
+) -> float | None:
+    """Return the first finite numeric value found under ``keys``.
+
+    Presentation-only metadata may legitimately be absent from the validated
+    FDD engine.  Missing optional values are therefore returned as ``None``;
+    malformed values that are present still raise a clear error.
+    """
+
+    for key in keys:
+        if key in mapping:
+            return _finite_number(mapping, key)
+    return None
+
+
+def _fdd_component_map(
+    mapping: Mapping[str, object],
+    key: str,
+    path: str,
+) -> dict[str, float]:
+    component_mapping = _require_mapping(mapping.get(key), f"{path}['{key}']")
+    return {
+        str(label): _finite_number(component_mapping, label)
+        for label in component_mapping
+    }
+
+
+def _fdd_optional_component_map(
+    mapping: Mapping[str, object],
+    keys: Sequence[str],
+    path: str,
+) -> dict[str, float]:
+    """Return the first available component mapping, otherwise ``{}``.
+
+    This is used only for optional Page 5 presentation metadata such as raw
+    pre-recognition component amounts.  Core totals remain strict.
+    """
+
+    for key in keys:
+        if key not in mapping or mapping.get(key) is None:
+            continue
+        value = mapping.get(key)
+        if not isinstance(value, Mapping):
+            raise TypeError(f"{path}['{key}']은(는) 매핑이어야 합니다.")
+        return {
+            str(label): _finite_number(value, label)
+            for label in value
+        }
+    return {}
+
+
+def _fdd_optional_text_map(
+    mapping: Mapping[str, object],
+    keys: Sequence[str],
+    path: str,
+) -> dict[str, str]:
+    for key in keys:
+        if key not in mapping or mapping.get(key) is None:
+            continue
+        value = mapping.get(key)
+        if not isinstance(value, Mapping):
+            raise TypeError(f"{path}['{key}']은(는) 매핑이어야 합니다.")
+        return {str(label): str(note) for label, note in value.items()}
+    return {}
+
+
+def _normalise_fdd_period(value: object) -> str:
+    """Normalise common historical period labels to e.g. ``2025A``."""
+
+    if isinstance(value, bool):
+        return str(value)
+    if isinstance(value, (int, float)):
+        numeric = float(value)
+        if isfinite(numeric) and numeric.is_integer():
+            return f"{int(numeric)}A"
+    text = str(value).strip()
+    if text.endswith("A"):
+        return text
+    if text.isdigit() and len(text) == 4:
+        return f"{text}A"
+    return text
+
+
+def _fdd_history_from_mapping(
+    nwc: Mapping[str, object],
+) -> list[dict[str, object]]:
+    """Read NWC/revenue history without requiring a schema not in the model.
+
+    Phase 1's validated FDD contract does not guarantee historical ratio data.
+    If a supported mapping is present, preserve it; otherwise return an empty
+    list rather than fabricating 2023A/2024A values in the dashboard layer.
+    """
+
+    aliases = (
+        "nwc_to_revenue_by_period",
+        "nwc_ratio_by_period",
+        "nwc_to_revenue_history",
+        "historical_nwc_ratios",
+    )
+    mapping: Mapping[str, object] | None = None
+    for key in aliases:
+        candidate = nwc.get(key)
+        if candidate is None:
+            continue
+        if not isinstance(candidate, Mapping):
+            raise TypeError(f"model['FDD']['nwc']['{key}']은(는) 매핑이어야 합니다.")
+        mapping = candidate
+        break
+
+    if mapping is None:
+        single_ratio = _fdd_optional_number(
+            nwc,
+            (
+                "closing_nwc_ratio",
+                "closing_nwc_to_revenue",
+                "nwc_to_revenue",
+                "nwc_to_revenue_2025",
+            ),
+        )
+        if single_ratio is None:
+            return []
+        return [{"period": "2025A", "nwc_to_revenue": single_ratio}]
+
+    history: list[dict[str, object]] = []
+    for period in mapping:
+        ratio = _finite_number(mapping, period)
+        history.append(
+            {
+                "period": _normalise_fdd_period(period),
+                "nwc_to_revenue": ratio,
+            }
+        )
+    history.sort(key=lambda item: str(item["period"]))
+    return history
+
+
+def _fdd_rate_fraction(value: float) -> float:
+    """Accept recognition rates stored as either 0~1 or 0~100."""
+
+    if not isfinite(value) or value < 0:
+        raise ValueError("FDD 인정률은 0 이상의 유한한 숫자여야 합니다.")
+    if value <= 1.0:
+        return value
+    if value <= 100.0:
+        return value / 100.0
+    raise ValueError("FDD 인정률은 0~1 또는 0~100 범위여야 합니다.")
+
+
+def _lookup_component(
+    mapping: Mapping[str, object],
+    aliases: Sequence[str],
+) -> tuple[str | None, float | None]:
+    for label in aliases:
+        if label in mapping:
+            return label, _finite_number(mapping, label)
+    return None, None
+
+
+def _lookup_recognition_rate(
+    rates: Mapping[str, object],
+    labels: Sequence[str],
+    prefixes: Sequence[str] = (),
+) -> float | None:
+    candidates: list[str] = []
+    for label in labels:
+        candidates.append(label)
+        candidates.extend(f"{prefix} / {label}" for prefix in prefixes)
+    for key in candidates:
+        if key in rates:
+            return _fdd_rate_fraction(_finite_number(rates, key))
+    return None
+
+
+def _gross_component_amount(
+    *,
+    recognized_components: Mapping[str, object],
+    raw_inputs: Mapping[str, object],
+    recognition_rates: Mapping[str, object],
+    aliases: Sequence[str],
+    rate_prefixes: Sequence[str],
+    path: str,
+) -> tuple[str, float, float]:
+    """Return ``(label, gross input, recognized base amount)`` for overlay.
+
+    Raw input maps are optional in the validated Phase 1 contract.  If absent,
+    gross amount is recovered from the recognized component and its base
+    recognition rate.  If the rate is also absent, the recognized amount is
+    used as the gross amount; this is exact for the current 100%-recognized
+    Ligachem and short-term-financial-instrument Base inputs.
+    """
+
+    raw_label, raw_value = _lookup_component(raw_inputs, aliases)
+    recognized_label, recognized_value = _lookup_component(
+        recognized_components,
+        aliases,
+    )
+    label = raw_label or recognized_label
+    if label is None:
+        raise KeyError(
+            f"FDD overlay 필수 구성요소 누락: {path}에서 "
+            + " / ".join(aliases)
+        )
+
+    recognized = 0.0 if recognized_value is None else recognized_value
+    if raw_value is not None:
+        return label, raw_value, recognized
+
+    rate = _lookup_recognition_rate(
+        recognition_rates,
+        aliases,
+        prefixes=rate_prefixes,
+    )
+    if rate is not None and rate > 0:
+        return label, recognized / rate, recognized
+    return label, recognized, recognized
+
+
+def _assert_fdd_close(actual: float, expected: float, message: str) -> None:
+    if abs(actual - expected) > FDD_RECONCILIATION_TOLERANCE:
+        raise ValueError(
+            f"{message}: actual={actual:,.6f}{MODEL_UNIT}, "
+            f"expected={expected:,.6f}{MODEL_UNIT}"
+        )
+
+
+def prepare_fdd_review_data(model: Mapping[str, object]) -> dict[str, object]:
+    """Transform the validated model into immutable Page 5 display data.
+
+    The adapter performs no workbook I/O and no independent valuation.  Core
+    financial totals are strict and reconciled.  Presentation-only metadata
+    that Phase 1 does not guarantee (historical QoE margins, classification
+    notes, NWC ratio history, gross pre-recognition inputs) is optional.
+    """
+
+    model_mapping = _require_mapping(model, "model")
+    fdd = _require_mapping(model_mapping.get("FDD"), "model['FDD']")
+    qoe = _require_mapping(fdd.get("qoe"), "model['FDD']['qoe']")
+    nwc = _require_mapping(fdd.get("nwc"), "model['FDD']['nwc']")
+    bridge = _require_mapping(
+        fdd.get("transaction_bridge"),
+        "model['FDD']['transaction_bridge']",
+    )
+    dcf = _require_mapping(model_mapping.get("DCF"), "model['DCF']")
+    equity = _require_mapping(
+        model_mapping.get("지분가치"),
+        "model['지분가치']",
+    )
+
+    enterprise_value = _fdd_value(dcf, "기업가치", "model['DCF']")
+    equity_value = _fdd_value(equity, "지분가치", "model['지분가치']")
+    shares = _fdd_value(
+        equity,
+        "유통주식수(백만주)",
+        "model['지분가치']",
+    )
+    if shares <= 0:
+        raise ValueError("FDD 표시용 유통주식수는 0보다 커야 합니다.")
+    value_per_share = _fdd_value(
+        equity,
+        "주당 내재가치",
+        "model['지분가치']",
+    )
+
+    cash_components = _fdd_component_map(
+        bridge,
+        "cash_like_components",
+        "model['FDD']['transaction_bridge']",
+    )
+    debt_components = _fdd_component_map(
+        bridge,
+        "debt_like_components",
+        "model['FDD']['transaction_bridge']",
+    )
+    non_operating_components = _fdd_component_map(
+        bridge,
+        "non_operating_asset_components",
+        "model['FDD']['transaction_bridge']",
+    )
+    recognition_rates = _fdd_component_map(
+        bridge,
+        "recognition_rates",
+        "model['FDD']['transaction_bridge']",
+    )
+
+    # These richer maps were contemplated by the Page 5 UI but are not part
+    # of the validated Phase 1 contract.  Read them only when supplied.
+    cash_inputs = _fdd_optional_component_map(
+        bridge,
+        ("cash_like_input_amounts", "cash_like_amounts"),
+        "model['FDD']['transaction_bridge']",
+    )
+    debt_inputs = _fdd_optional_component_map(
+        bridge,
+        ("debt_like_input_amounts", "debt_like_amounts"),
+        "model['FDD']['transaction_bridge']",
+    )
+    non_operating_inputs = _fdd_optional_component_map(
+        bridge,
+        (
+            "non_operating_asset_input_amounts",
+            "non_operating_asset_amounts",
+        ),
+        "model['FDD']['transaction_bridge']",
+    )
+    classification_notes = _fdd_optional_text_map(
+        bridge,
+        ("classification_notes",),
+        "model['FDD']['transaction_bridge']",
+    )
+
+    base = {
+        "reported_ebitda": _fdd_value(
+            qoe,
+            "reported_ebitda",
+            "model['FDD']['qoe']",
+        ),
+        "fdd_ebitda": _fdd_value(
+            qoe,
+            "fdd_ebitda",
+            "model['FDD']['qoe']",
+        ),
+        "normalized_nwc_peg": _fdd_value(
+            nwc,
+            "normalized_peg",
+            "model['FDD']['nwc']",
+        ),
+        "closing_nwc": _fdd_value(
+            nwc,
+            "closing_nwc",
+            "model['FDD']['nwc']",
+        ),
+        "nwc_gap": _fdd_value(
+            nwc,
+            "nwc_gap",
+            "model['FDD']['nwc']",
+        ),
+        "applied_nwc_adjustment": _fdd_value(
+            bridge,
+            "applied_nwc_price_adjustment",
+            "model['FDD']['transaction_bridge']",
+        ),
+        "cash_like": _fdd_value(
+            bridge,
+            "cash_like",
+            "model['FDD']['transaction_bridge']",
+        ),
+        "debt_like": _fdd_value(
+            bridge,
+            "debt_like",
+            "model['FDD']['transaction_bridge']",
+        ),
+        "net_cash": _fdd_value(
+            bridge,
+            "net_cash",
+            "model['FDD']['transaction_bridge']",
+        ),
+        "non_operating_assets": _fdd_value(
+            bridge,
+            "non_operating_assets",
+            "model['FDD']['transaction_bridge']",
+        ),
+        "nci": _fdd_value(
+            bridge,
+            "non_controlling_interests",
+            "model['FDD']['transaction_bridge']",
+        ),
+        "fdd_equity_adjustment": _fdd_value(
+            bridge,
+            "fdd_equity_adjustment",
+            "model['FDD']['transaction_bridge']",
+        ),
+        "enterprise_value": enterprise_value,
+        "equity_value": equity_value,
+        "shares_outstanding_millions": shares,
+        "value_per_share": value_per_share,
+    }
+
+    # Reconcile the strict financial contract before producing Page 5 data.
+    _assert_fdd_close(
+        base["cash_like"] - base["debt_like"],
+        base["net_cash"],
+        "Page 5 Net Cash가 model['FDD']와 대사되지 않습니다",
+    )
+    _assert_fdd_close(
+        base["closing_nwc"] - base["normalized_nwc_peg"],
+        base["nwc_gap"],
+        "Page 5 NWC gap이 model['FDD']와 대사되지 않습니다",
+    )
+    recalculated_adjustment = (
+        base["net_cash"]
+        + base["non_operating_assets"]
+        - base["nci"]
+        + base["applied_nwc_adjustment"]
+    )
+    _assert_fdd_close(
+        recalculated_adjustment,
+        base["fdd_equity_adjustment"],
+        "Page 5 FDD 지분가치 조정액이 model['FDD']와 대사되지 않습니다",
+    )
+    _assert_fdd_close(
+        enterprise_value + base["fdd_equity_adjustment"],
+        equity_value,
+        "Page 5 Equity Value가 model['지분가치']와 대사되지 않습니다",
+    )
+    _assert_fdd_close(
+        equity_value / shares,
+        value_per_share,
+        "Page 5 주당 FDD 가치가 model['지분가치']와 대사되지 않습니다",
+    )
+
+    adjustments_2025 = _fdd_component_map(
+        qoe,
+        "adjustments_2025",
+        "model['FDD']['qoe']",
+    )
+    _assert_fdd_close(
+        base["reported_ebitda"] + sum(adjustments_2025.values()),
+        base["fdd_ebitda"],
+        "Page 5 QoE bridge가 FDD EBITDA와 대사되지 않습니다",
+    )
+
+    adjustment_notes = _fdd_optional_text_map(
+        qoe,
+        ("adjustment_notes",),
+        "model['FDD']['qoe']",
+    )
+    open_adjustments = {
+        "특수관계자·보수 정상화",
+        "Run-rate / Pro forma 조정",
+    }
+    register: list[dict[str, object]] = []
+    for label, amount in adjustments_2025.items():
+        if amount != 0:
+            status = "Confirmed"
+            default_note = "FDD EBITDA에 정량 반영"
+        elif label in open_adjustments:
+            status = "Open"
+            default_note = "공개정보만으로 정량 확정하지 않음"
+        else:
+            status = "No Adjustment"
+            default_note = "현재 Base Case 정량 조정 없음"
+        register.append(
+            {
+                "항목": label,
+                "조정액": amount,
+                "처리": adjustment_notes.get(label, default_note),
+                "상태": status,
+            }
+        )
+
+    qoe_margin = _fdd_optional_number(
+        qoe,
+        ("fdd_ebitda_margin", "fdd_margin"),
+    )
+    qoe_by_period = {
+        "2025A": {
+            "reported_ebitda": base["reported_ebitda"],
+            "qoe_adjustment": base["fdd_ebitda"] - base["reported_ebitda"],
+            "fdd_ebitda": base["fdd_ebitda"],
+            "fdd_margin": qoe_margin,
+            "adjustments": adjustments_2025,
+            "register": register,
+        }
+    }
+
+    nwc_history = _fdd_history_from_mapping(nwc)
+    normalized_peg_ratio = _fdd_optional_number(
+        nwc,
+        (
+            "normalized_peg_ratio",
+            "normalized_nwc_peg_ratio",
+            "peg_ratio",
+        ),
+    )
+
+    watchlist_labels = (
+        "공급자금융약정 대상 채무",
+        "분할 관련 연대채무",
+        "소송 총 청구액",
+        "기타 debt-like (당기법인세부채 등)",
+    )
+    debt_watchlist: list[dict[str, object]] = []
+    for label in watchlist_labels:
+        rate = _lookup_recognition_rate(
+            recognition_rates,
+            (label,),
+            prefixes=("Debt-like",),
+        )
+        recognized = debt_components.get(label, 0.0)
+        raw_amount = debt_inputs.get(label)
+        note = classification_notes.get(
+            f"Debt-like / {label}",
+            classification_notes.get(label, ""),
+        )
+        # Do not invent a gross public-input amount when Phase 1 did not
+        # return one.  Keep it nullable while still showing recognized value.
+        if (
+            raw_amount is None
+            and label not in debt_components
+            and rate is None
+            and not note
+        ):
+            continue
+        debt_watchlist.append(
+            {
+                "항목": label,
+                "공시_입력금액": raw_amount,
+                "인정률": rate,
+                "FDD_반영액": recognized,
+                "처리": note,
+                "상태": "현재 공개정보 기준 Base Case에서 정량 반영하지 않음",
+            }
+        )
+
+    # Gross inputs used only by temporary overlay.  Preserve explicit Phase 1
+    # raw input maps when available; otherwise recover the two exposed slider
+    # inputs from recognized components and base recognition rates.
+    overlay_cash_inputs = dict(cash_inputs)
+    overlay_non_operating_inputs = dict(non_operating_inputs)
+    try:
+        cash_label, cash_gross, _ = _gross_component_amount(
+            recognized_components=cash_components,
+            raw_inputs=cash_inputs,
+            recognition_rates=recognition_rates,
+            aliases=("단기금융상품", "단기금융예치금"),
+            rate_prefixes=("Cash-like",),
+            path="model['FDD']['transaction_bridge']['cash_like_components']",
+        )
+        overlay_cash_inputs.setdefault(cash_label, cash_gross)
+    except KeyError:
+        pass
+    try:
+        ligachem_label, ligachem_gross, _ = _gross_component_amount(
+            recognized_components=non_operating_components,
+            raw_inputs=non_operating_inputs,
+            recognition_rates=recognition_rates,
+            aliases=("리가켐바이오 시장가치", "리가켐바이오"),
+            rate_prefixes=("Non-operating", "비영업자산"),
+            path=(
+                "model['FDD']['transaction_bridge']"
+                "['non_operating_asset_components']"
+            ),
+        )
+        overlay_non_operating_inputs.setdefault(
+            ligachem_label,
+            ligachem_gross,
+        )
+    except KeyError:
+        pass
+
+    return {
+        "base": deepcopy(base),
+        "qoe_by_period": deepcopy(qoe_by_period),
+        "nwc_history": deepcopy(nwc_history),
+        "normalized_peg_ratio": normalized_peg_ratio,
+        "cash_like_components": deepcopy(cash_components),
+        "debt_like_components": deepcopy(debt_components),
+        "non_operating_asset_components": deepcopy(non_operating_components),
+        "cash_like_input_amounts": deepcopy(overlay_cash_inputs),
+        "debt_like_input_amounts": deepcopy(debt_inputs),
+        "non_operating_asset_input_amounts": deepcopy(
+            overlay_non_operating_inputs
+        ),
+        "recognition_rates": deepcopy(recognition_rates),
+        "classification_notes": deepcopy(classification_notes),
+        "debt_like_watchlist": deepcopy(debt_watchlist),
+        "forecast_qoe_adjustments": {
+            "ebit": deepcopy(
+                _fdd_optional_component_map(
+                    qoe,
+                    ("forecast_ebit_adjustment",),
+                    "model['FDD']['qoe']",
+                )
+            ),
+            "da": deepcopy(
+                _fdd_optional_component_map(
+                    qoe,
+                    ("forecast_da_adjustment",),
+                    "model['FDD']['qoe']",
+                )
+            ),
+            "lease_capex": deepcopy(
+                _fdd_optional_component_map(
+                    qoe,
+                    ("lease_capex",),
+                    "model['FDD']['qoe']",
+                )
+            ),
+            "lease_capex_ratio": deepcopy(
+                _fdd_optional_component_map(
+                    qoe,
+                    ("lease_capex_ratio",),
+                    "model['FDD']['qoe']",
+                )
+            ),
+        },
+    }
+
+
+def calculate_fdd_overlay(
+    review_data: Mapping[str, object],
+    *,
+    ligachem_recognition_rate: object,
+    short_term_financial_instrument_recognition_rate: object,
+    nwc_price_adjustment_recognition_rate: object,
+) -> dict[str, float]:
+    """Calculate an isolated Page 5 scenario snapshot from copied Base values.
+
+    The function changes only the three user-selected overlay assumptions and
+    never mutates the validated Base model.
+    """
+
+    data = _require_mapping(review_data, "FDD review data")
+    base = _require_mapping(data.get("base"), "FDD review data['base']")
+    cash_components = _require_mapping(
+        data.get("cash_like_components"),
+        "FDD review data['cash_like_components']",
+    )
+    non_operating_components = _require_mapping(
+        data.get("non_operating_asset_components"),
+        "FDD review data['non_operating_asset_components']",
+    )
+    cash_inputs = _require_mapping(
+        data.get("cash_like_input_amounts"),
+        "FDD review data['cash_like_input_amounts']",
+    )
+    non_operating_inputs = _require_mapping(
+        data.get("non_operating_asset_input_amounts"),
+        "FDD review data['non_operating_asset_input_amounts']",
+    )
+    recognition_rates = _require_mapping(
+        data.get("recognition_rates"),
+        "FDD review data['recognition_rates']",
+    )
+
+    def _percent(value: object, label: str) -> float:
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise TypeError(f"{label}은(는) 숫자여야 합니다.")
+        numeric = float(value)
+        if not isfinite(numeric) or not 0 <= numeric <= 100:
+            raise ValueError(f"{label}은(는) 0~100 범위여야 합니다.")
+        return numeric / 100.0
+
+    ligachem_rate = _percent(ligachem_recognition_rate, "리가켐바이오 인정률")
+    short_term_rate = _percent(
+        short_term_financial_instrument_recognition_rate,
+        "단기금융상품 Cash-like 인정률",
+    )
+    nwc_rate = _percent(
+        nwc_price_adjustment_recognition_rate,
+        "NWC 가격조정 적용률",
+    )
+
+    short_label, short_gross, short_base_recognized = _gross_component_amount(
+        recognized_components=cash_components,
+        raw_inputs=cash_inputs,
+        recognition_rates=recognition_rates,
+        aliases=("단기금융상품", "단기금융예치금"),
+        rate_prefixes=("Cash-like",),
+        path="FDD review data['cash_like_components']",
+    )
+    ligachem_label, ligachem_gross, ligachem_base_recognized = (
+        _gross_component_amount(
+            recognized_components=non_operating_components,
+            raw_inputs=non_operating_inputs,
+            recognition_rates=recognition_rates,
+            aliases=("리가켐바이오 시장가치", "리가켐바이오"),
+            rate_prefixes=("Non-operating", "비영업자산"),
+            path="FDD review data['non_operating_asset_components']",
+        )
+    )
+
+    base_cash_like = _fdd_value(base, "cash_like", "FDD review data['base']")
+    base_non_operating = _fdd_value(
+        base,
+        "non_operating_assets",
+        "FDD review data['base']",
+    )
+    overlay_cash_like = (
+        base_cash_like
+        - short_base_recognized
+        + short_gross * short_term_rate
+    )
+    overlay_non_operating = (
+        base_non_operating
+        - ligachem_base_recognized
+        + ligachem_gross * ligachem_rate
+    )
+    overlay_debt_like = _fdd_value(
+        base,
+        "debt_like",
+        "FDD review data['base']",
+    )
+    overlay_net_cash = overlay_cash_like - overlay_debt_like
+    overlay_applied_nwc = (
+        _fdd_value(base, "nwc_gap", "FDD review data['base']")
+        * nwc_rate
+    )
+    overlay_nci = _fdd_value(base, "nci", "FDD review data['base']")
+    overlay_adjustment = (
+        overlay_net_cash
+        + overlay_non_operating
+        - overlay_nci
+        + overlay_applied_nwc
+    )
+    overlay_equity = (
+        _fdd_value(base, "enterprise_value", "FDD review data['base']")
+        + overlay_adjustment
+    )
+    shares = _fdd_value(
+        base,
+        "shares_outstanding_millions",
+        "FDD review data['base']",
+    )
+    if shares <= 0:
+        raise ValueError("FDD overlay 유통주식수는 0보다 커야 합니다.")
+    base_equity = _fdd_value(
+        base,
+        "equity_value",
+        "FDD review data['base']",
+    )
+
+    return {
+        "cash_like": overlay_cash_like,
+        "debt_like": overlay_debt_like,
+        "net_cash": overlay_net_cash,
+        "short_term_financial_instrument": short_gross * short_term_rate,
+        "ligachem": ligachem_gross * ligachem_rate,
+        "non_operating_assets": overlay_non_operating,
+        "applied_nwc_adjustment": overlay_applied_nwc,
+        "fdd_equity_adjustment": overlay_adjustment,
+        "equity_value": overlay_equity,
+        "value_per_share": overlay_equity / shares,
+        "difference_vs_base": overlay_equity - base_equity,
+    }

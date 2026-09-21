@@ -55,4 +55,4 @@ def test_end_to_end_dcf_reconciles():
 
     assert round(
         model["지분가치"]["주당 내재가치"]
-    ) == 244_708
+    ) == 238_181

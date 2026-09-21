@@ -19,11 +19,13 @@ def _():
         build_fcff_waterfall_insight,
         build_formula_explorer_insight,
         build_valuation_formula_catalog,
+        calculate_fdd_overlay,
         calculate_fcff_waterfall_kpis,
         prepare_auditor_range_comparison,
         prepare_challenge_sensitivity_data,
         prepare_fcff_waterfall_data,
         prepare_formula_explorer_data,
+        prepare_fdd_review_data,
         reconcile_formula_result,
         select_forecast_row,
     )
@@ -44,6 +46,7 @@ def _():
         build_fcff_waterfall_insight,
         build_formula_explorer_insight,
         build_valuation_formula_catalog,
+        calculate_fdd_overlay,
         calculate_fcff_waterfall_kpis,
         calculate_historical_multiple_ranges,
         calculate_trading_comps_ranges,
@@ -57,6 +60,7 @@ def _():
         prepare_auditor_range_comparison,
         prepare_challenge_sensitivity_data,
         prepare_fcff_waterfall_data,
+        prepare_fdd_review_data,
         prepare_formula_explorer_data,
         reconcile_formula_result,
         run_orion_dcf,
@@ -156,6 +160,7 @@ def _(mo):
         "muted": "#64748B",
         "line": "#D9E2EC",
         "surface": "#FFFFFF",
+        "soft": "#F7FAFC",
         "background": "#F4F7FA",
         "open_blue": "#EAF2F8",
         "open_gold": "#FBF4E6",
@@ -1083,6 +1088,174 @@ def _(mo):
                 line-height: 1.6;
             }}
 
+            .fdd-output-card {{
+                background: {COLORS["navy"]};
+                color: #FFFFFF;
+                border-radius: 10px;
+                padding: 15px 17px;
+                box-shadow: 0 3px 10px rgba(16, 42, 67, 0.15);
+            }}
+
+            .fdd-output-label {{
+                color: #BFD3E5;
+                font-size: 11px;
+                font-weight: 760;
+                letter-spacing: 0.05em;
+                margin-top: 6px;
+            }}
+
+            .fdd-output-value {{
+                color: #FFFFFF;
+                font-size: 27px;
+                font-weight: 820;
+                line-height: 1.2;
+                margin: 3px 0 9px 0;
+                font-variant-numeric: tabular-nums;
+            }}
+
+            .fdd-control-panel {{
+                background: {COLORS["surface"]};
+                border: 1px solid {COLORS["line"]};
+                border-radius: 10px;
+                padding: 13px 15px;
+                box-shadow: 0 2px 8px rgba(16, 42, 67, 0.05);
+            }}
+
+            .fdd-note-warning {{
+                border-left: 3px solid {COLORS["gold"]};
+                background: {COLORS["open_gold"]};
+                color: {COLORS["ink"]};
+                border-radius: 0 8px 8px 0;
+                padding: 10px 12px;
+                font-size: 12px;
+                line-height: 1.55;
+            }}
+
+            .fdd-section-panel {{
+                background: {COLORS["surface"]};
+                border: 1px solid {COLORS["line"]};
+                border-top: 3px solid {COLORS["blue"]};
+                border-radius: 10px;
+                padding: 14px 16px;
+                box-shadow: 0 2px 8px rgba(16, 42, 67, 0.05);
+                min-width: 0;
+            }}
+
+            .fdd-section-panel-teal {{
+                border-top-color: {COLORS["teal"]};
+            }}
+
+            .fdd-section-panel-gold {{
+                border-top-color: {COLORS["gold"]};
+            }}
+
+            .fdd-section-head {{
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 12px;
+                margin-bottom: 9px;
+            }}
+
+            .fdd-section-title {{
+                color: {COLORS["navy"]};
+                font-size: 16px;
+                font-weight: 800;
+                line-height: 1.35;
+            }}
+
+            .fdd-section-copy {{
+                color: {COLORS["muted"]};
+                font-size: 12px;
+                line-height: 1.5;
+                margin-top: 3px;
+            }}
+
+            .fdd-period-badge {{
+                display: inline-flex;
+                align-items: center;
+                border-radius: 999px;
+                padding: 5px 9px;
+                background: {COLORS["open_blue"]};
+                border: 1px solid #C9DCEB;
+                color: {COLORS["blue"]};
+                font-size: 11px;
+                font-weight: 800;
+                white-space: nowrap;
+            }}
+
+            .fdd-sheet-table {{
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 12px;
+                font-variant-numeric: tabular-nums;
+            }}
+
+            .fdd-sheet-table th {{
+                padding: 7px 8px;
+                color: {COLORS["muted"]};
+                font-weight: 780;
+                border-bottom: 1px solid {COLORS["line"]};
+                text-align: right;
+                background: #F8FAFC;
+            }}
+
+            .fdd-sheet-table td {{
+                padding: 7px 8px;
+                color: {COLORS["ink"]};
+                border-bottom: 1px solid #E9EEF3;
+                text-align: right;
+            }}
+
+            .fdd-sheet-table th:first-child,
+            .fdd-sheet-table td:first-child {{
+                text-align: left;
+            }}
+
+            .fdd-sheet-table tr:last-child td {{
+                border-bottom: 0;
+            }}
+
+            .fdd-sheet-total td {{
+                font-weight: 800;
+                color: {COLORS["navy"]};
+                border-top: 1px solid {COLORS["blue"]};
+            }}
+
+            .fdd-section-divider {{
+                height: 1px;
+                background: {COLORS["line"]};
+                margin: 12px 0;
+            }}
+
+            .fdd-status-pill {{
+                display: inline-flex;
+                align-items: center;
+                border-radius: 999px;
+                padding: 3px 8px;
+                font-size: 10px;
+                font-weight: 780;
+                white-space: nowrap;
+            }}
+
+            .fdd-status-confirmed {{
+                background: #DDF3F0;
+                color: #176B63;
+                border: 1px solid #ABDCD5;
+            }}
+
+            .fdd-status-open {{
+                background: {COLORS["open_gold"]};
+                color: #8A5A10;
+                border: 1px solid #E3C780;
+            }}
+
+            .fdd-status-no-adjustment {{
+                background: #EEF2F6;
+                color: {COLORS["muted"]};
+                border: 1px solid {COLORS["line"]};
+            }}
+
             @media (max-width: 900px) {{
                 .formula-kpi-grid,
                 .formula-input-grid,
@@ -1185,7 +1358,7 @@ def _(current_price, mo, upside, value_per_share):
             <div class="pitch-subtitle">
                 지역별 매출액 전망과 영업수익성, 투자소요 및
                 운전자본 변동을 FCFF로 전환하여 산정했습니다.
-                가치 변동의 핵심 변수는 WACC와 Terminal Growth Rate입니다.
+                가치 변동의 핵심 변수는 WACC와 영구성장률입니다.
             </div>
 
             <div class="pitch-meta">
@@ -1351,7 +1524,7 @@ def _(
             ygap=2,
             hovertemplate=(
                 "WACC %{x}<br>"
-                "Terminal Growth Rate %{y}<br>"
+                "영구성장률 %{y}<br>"
                 "Implied Share Price %{z:,.0f}천원"
                 "<extra></extra>"
             ),
@@ -1360,6 +1533,8 @@ def _(
 
     sensitivity_fig.update_layout(
         title=(
+            "<b>기준 시나리오 민감도</b>"
+            "<br><sup>WACC × 영구성장률 · Implied Share Price, 천원 · ● 기준</sup>"
             "<b>Base Case Sensitivity</b>"
             "<br><sup>WACC × Terminal Growth Rate · Implied Share Price, 천원 · ● 기준</sup>"
         )
@@ -1371,7 +1546,7 @@ def _(
     )
 
     sensitivity_fig.update_yaxes(
-        title="Terminal Growth Rate",
+        title="영구성장률",
     )
 
     sensitivity_fig = apply_chart_style(
@@ -1730,7 +1905,7 @@ def _(
             ygap=2,
             hovertemplate=(
                 "WACC 변동 %{x}<br>"
-                "Terminal Growth Rate 변동 %{y}<br>"
+                "영구성장률 변동 %{y}<br>"
                 "Valuation Range Median %{z:,.0f}천원"
                 "<extra></extra>"
             ),
@@ -1738,6 +1913,7 @@ def _(
     )
     auditor_range_sensitivity_fig.update_layout(
         title=(
+            "<b>독립 가치평가 범위 민감도</b>"
             "<b>Independent Valuation Range Sensitivity</b>"
             "<br><sup>셀: 하단–상단, 천원 · 색상: Median · ● 기준</sup>"
         )
@@ -1745,7 +1921,7 @@ def _(
     auditor_range_sensitivity_fig.update_xaxes(
         title="WACC 변동", side="top"
     )
-    auditor_range_sensitivity_fig.update_yaxes(title="Terminal Growth Rate 변동")
+    auditor_range_sensitivity_fig.update_yaxes(title="영구성장률 변동")
     auditor_range_sensitivity_fig = apply_chart_style(
         auditor_range_sensitivity_fig,
         height=255,
@@ -1777,6 +1953,8 @@ def _(
     _misstatement_direction = auditor_range_comparison["왜곡표시 방향"]
     _nearest_range_value = auditor_range_comparison["가장 가까운 범위 금액"]
     _status_label = {
+        "OUTSIDE_RANGE": "기준 시나리오 범위 밖",
+        "WITHIN_RANGE": "기준 시나리오 범위 내",
         "OUTSIDE_RANGE": "Base Case 범위 밖",
         "WITHIN_RANGE": "Base Case 범위 내",
     }.get(
@@ -1791,6 +1969,10 @@ def _(
         else "밖"
     )
     _ib_range_conclusion = (
+        f"독립 가치평가 범위는 "
+        f"{_lower['주당 내재가치']:,.0f}원–{_upper['주당 내재가치']:,.0f}원이며 "
+        f"중앙값은 {_midpoint:,.0f}원입니다. "
+        f"기준 시나리오 {_management['주당 내재가치']:,.0f}원은 범위 {_range_position}에 있습니다. "
         f"Independent Valuation Range는 "
         f"{_lower['주당 내재가치']:,.0f}원–{_upper['주당 내재가치']:,.0f}원이며 "
         f"중앙값은 {_midpoint:,.0f}원입니다. "
@@ -1802,6 +1984,9 @@ def _(
         [
             mo.md(
                 """
+                <div class="fcff-panel-title">하방 가정 범위</div>
+                <div class="fcff-panel-caption">
+                    Revenue CAGR, EBIT Margin, WACC, 영구성장률의
                 <div class="fcff-panel-title">Downside Assumption Range</div>
                 <div class="fcff-panel-caption">
                     Revenue CAGR, EBIT Margin, WACC, Terminal Growth Rate의
@@ -1826,7 +2011,7 @@ def _(
                         [auditor_lower_wacc, auditor_upper_wacc],
                         widths=[1, 1], gap=0.8, wrap=False,
                     ),
-                    mo.md('<div class="range-control-label">Terminal Growth Rate 조정 (%p)</div>'),
+                    mo.md('<div class="range-control-label">영구성장률 조정 (%p)</div>'),
                     mo.hstack(
                         [auditor_lower_terminal_growth, auditor_upper_terminal_growth],
                         widths=[1, 1], gap=0.8, wrap=False,
@@ -1867,7 +2052,7 @@ def _(
             f"{_upper['WACC']:.2%}",
         ),
         (
-            "Terminal Growth Rate",
+            "영구성장률",
             f"{_management['영구성장률']:.2%}",
             f"{_lower['영구성장률']:.2%}",
             f"{_upper['영구성장률']:.2%}",
@@ -1900,6 +2085,10 @@ def _(
             <div class="challenge-panel-head">
                 <div>
                     <div class="fcff-panel-title">
+                        기준 시나리오 vs 독립 가치평가 범위
+                    </div>
+                    <div class="challenge-panel-caption">
+                        기준 시나리오의 방법·가정·데이터를 독립적인 하방 시나리오와 비교
                         Base Case vs Independent Valuation Range
                     </div>
                     <div class="challenge-panel-caption">
@@ -1918,18 +2107,20 @@ def _(
                     </div>
                 </div>
                 <div class="challenge-case challenge-case-review">
+                    <div class="challenge-case-name">독립 가치평가 범위 · DOWNSIDE CASE</div>
                     <div class="challenge-case-name">INDEPENDENT VALUATION RANGE · DOWNSIDE CASE</div>
                     <div class="challenge-case-value">
                         {_lower['주당 내재가치']:,.0f}–{_upper['주당 내재가치']:,.0f}원
                     </div>
                     <div class="challenge-case-meta">
-                        Median {_midpoint:,.0f}원 · Valuation Range 폭 {auditor_range_comparison['범위폭']:,.0f}원<br>
+                        Median {_midpoint:,.0f}원 · 가치평가 범위 폭 {auditor_range_comparison['범위폭']:,.0f}원<br>
                         상승여력 {_lower['상승여력']:.1%}–{_upper['상승여력']:.1%}
                     </div>
                 </div>
             </div>
             <table class="challenge-table">
                 <thead>
+                    <tr><th>핵심 가정</th><th>기준 시나리오</th><th>범위 하단</th><th>범위 상단</th></tr>
                     <tr><th>Key Assumption</th><th>Base Case</th><th>Range Low</th><th>Range High</th></tr>
                 </thead>
                 <tbody>{_table_body}</tbody>
@@ -2226,39 +2417,33 @@ def _(
 def _(enterprise_value, equity_value, model):
     equity_bridge = model["지분가치"]
 
-    other_non_operating_assets = (
-        equity_bridge["비영업자산 합계"]
-        - equity_bridge["초과현금"]
-        - equity_bridge["리가켐바이오 시장가치"]
-    )
-
     bridge_labels = [
         "기업가치",
-        "초과현금",
-        "리가켐바이오",
-        "기타 비영업자산",
-        "리스부채",
+        "Cash-like",
+        "Debt-like",
+        "비영업자산",
         "비지배지분",
+        "NWC 가격조정",
         "지분가치",
     ]
 
     bridge_values = [
         enterprise_value / 1_000_000,
-        equity_bridge["초과현금"] / 1_000_000,
-        equity_bridge["리가켐바이오 시장가치"] / 1_000_000,
-        other_non_operating_assets / 1_000_000,
-        -equity_bridge["리스부채"] / 1_000_000,
+        equity_bridge["Cash-like 자산"] / 1_000_000,
+        -equity_bridge["Debt-like 항목"] / 1_000_000,
+        equity_bridge["비영업자산 합계"] / 1_000_000,
         -equity_bridge["비지배지분"] / 1_000_000,
+        equity_bridge["적용 NWC 가격조정"] / 1_000_000,
         0,
     ]
 
     bridge_text = [
         f"{enterprise_value / 1_000_000:.2f}",
-        f"+{equity_bridge['초과현금'] / 1_000_000:.2f}",
-        f"+{equity_bridge['리가켐바이오 시장가치'] / 1_000_000:.2f}",
-        f"+{other_non_operating_assets / 1_000_000:.2f}",
-        f"-{equity_bridge['리스부채'] / 1_000_000:.2f}",
+        f"+{equity_bridge['Cash-like 자산'] / 1_000_000:.2f}",
+        f"-{equity_bridge['Debt-like 항목'] / 1_000_000:.2f}",
+        f"+{equity_bridge['비영업자산 합계'] / 1_000_000:.2f}",
         f"-{equity_bridge['비지배지분'] / 1_000_000:.2f}",
+        f"{equity_bridge['적용 NWC 가격조정'] / 1_000_000:+.2f}",
         f"{equity_value / 1_000_000:.2f}",
     ]
     return bridge_labels, bridge_text, bridge_values
@@ -2375,6 +2560,9 @@ def _(
         [
             mo.md(
                 """
+                <div class="section-title">시나리오 및 주요 가정 검토</div>
+                <div class="section-subtitle">
+                    기준 시나리오를 독립적인 하방 가정과 비교하고 가치 차이로 연결
                 <div class="section-title">Scenario &amp; Assumption Review</div>
                 <div class="section-subtitle">
                     Base Case를 독립적 downside 가정과 비교하고 가치 차이로 연결
@@ -2389,7 +2577,7 @@ def _(
                         [
                             mo.md(
                                 """
-                                <div class="section-title">WACC × Terminal Growth Rate</div>
+                                <div class="section-title">WACC × 영구성장률</div>
                                 <div class="section-subtitle">
                                     Base Case와 Independent Valuation Range 비교
                                 </div>
@@ -2522,7 +2710,7 @@ def _(escape):
         elif _stage == "DCF":
             _ordered_items = [
                 ("WACC", _inputs["WACC"], "rate"),
-                ("Terminal Growth Rate", _inputs["영구성장률"], "rate"),
+                ("영구성장률", _inputs["영구성장률"], "rate"),
                 (
                     "추정기간 FCFF 현재가치",
                     _details["추정기간 FCFF 현재가치"] / 1_000_000,
@@ -2548,6 +2736,16 @@ def _(escape):
             _ordered_items = [
                 ("Enterprise Value (EV)", _inputs["기업가치"], "trillion"),
                 (
+                    "Cash-like 자산",
+                    _details["Cash-like 자산"] / 1_000_000,
+                    "trillion",
+                ),
+                (
+                    "Debt-like 항목 (차감)",
+                    _details["Debt-like 항목"] / 1_000_000,
+                    "trillion",
+                ),
+                (
                     "비영업자산 합계",
                     _details["비영업자산 합계"] / 1_000_000,
                     "trillion",
@@ -2565,6 +2763,11 @@ def _(escape):
                 (
                     "비지배지분 (차감)",
                     _details["비지배지분"] / 1_000_000,
+                    "trillion",
+                ),
+                (
+                    "적용 NWC 가격조정",
+                    _details["적용 NWC 가격조정"] / 1_000_000,
                     "trillion",
                 ),
                 (
@@ -3490,11 +3693,814 @@ def _(
     return (market_calibration_body,)
 
 
+# FDD-01 · validated model output -> display-only structures
+@app.cell
+def _(model, prepare_fdd_review_data):
+    fdd_review_data = prepare_fdd_review_data(model)
+    return (fdd_review_data,)
+
+
+# FDD-02 · analysis-period selector, historical FDD-sheet reference, and temporary scenario controls
+@app.cell
+def _(fdd_review_data, mo):
+    # 2023A~2024A are presentation-only historical reference values transcribed
+    # from the validated FDD worksheet supplied with the project. 2025A is
+    # overwritten with the live validated model output below, so valuation
+    # logic continues to use a single Python Base Case.
+    fdd_historical_reference = {
+        "2023A": {
+            "reported_ebitda": 649_583.0,
+            "qoe_adjustment": -4_019.0,
+            "fdd_ebitda": 645_564.0,
+            "fdd_margin": 0.222,
+            "revenue": 2_912_358.0,
+            "operating_nwc": 154_259.0,
+            "nwc_to_revenue": 0.053,
+        },
+        "2024A": {
+            "reported_ebitda": 704_039.0,
+            "qoe_adjustment": -4_190.0,
+            "fdd_ebitda": 699_849.0,
+            "fdd_margin": 0.225,
+            "revenue": 3_104_339.0,
+            "operating_nwc": 55_380.0,
+            "nwc_to_revenue": 0.018,
+        },
+        "2025A": {
+            "reported_ebitda": float(fdd_review_data["base"]["reported_ebitda"]),
+            "qoe_adjustment": (
+                float(fdd_review_data["base"]["fdd_ebitda"])
+                - float(fdd_review_data["base"]["reported_ebitda"])
+            ),
+            "fdd_ebitda": float(fdd_review_data["base"]["fdd_ebitda"]),
+            "fdd_margin": 0.216,
+            "revenue": 3_332_443.0,
+            "operating_nwc": float(fdd_review_data["base"]["closing_nwc"]),
+            "nwc_to_revenue": 0.035,
+        },
+    }
+
+    fdd_qoe_period_selector = mo.ui.dropdown(
+        options={period: period for period in ("2023A", "2024A", "2025A")},
+        value="2025A",
+        label="FDD 분석연도",
+        allow_select_none=False,
+        full_width=True,
+    )
+    fdd_ligachem_recognition = mo.ui.slider(
+        start=0, stop=100, step=5, value=100,
+        label="리가켐바이오 인정률 (%)", include_input=True, full_width=True,
+    )
+    fdd_short_term_recognition = mo.ui.slider(
+        start=0, stop=100, step=5, value=100,
+        label="단기금융상품 Cash-like 인정률 (%)", include_input=True, full_width=True,
+    )
+    fdd_nwc_recognition = mo.ui.slider(
+        start=0, stop=100, step=5, value=0,
+        label="NWC 가격조정 적용률 (%)", include_input=True, full_width=True,
+    )
+    return (
+        fdd_historical_reference,
+        fdd_ligachem_recognition,
+        fdd_nwc_recognition,
+        fdd_qoe_period_selector,
+        fdd_short_term_recognition,
+    )
+
+
+# FDD-03 · isolated overlay snapshot (never mutates the model)
+@app.cell
+def _(
+    calculate_fdd_overlay,
+    fdd_ligachem_recognition,
+    fdd_nwc_recognition,
+    fdd_review_data,
+    fdd_short_term_recognition,
+):
+    fdd_overlay_snapshot = calculate_fdd_overlay(
+        fdd_review_data,
+        ligachem_recognition_rate=fdd_ligachem_recognition.value,
+        short_term_financial_instrument_recognition_rate=(
+            fdd_short_term_recognition.value
+        ),
+        nwc_price_adjustment_recognition_rate=fdd_nwc_recognition.value,
+    )
+    return (fdd_overlay_snapshot,)
+
+
+# FDD-04 · dense research workbench inspired by institutional research UIs
+@app.cell
+def _(
+    COLORS,
+    escape,
+    fdd_historical_reference,
+    fdd_ligachem_recognition,
+    fdd_nwc_recognition,
+    fdd_overlay_snapshot,
+    fdd_qoe_period_selector,
+    fdd_review_data,
+    fdd_short_term_recognition,
+    mo,
+):
+    _base = fdd_review_data["base"]
+    _qoe_live = fdd_review_data["qoe_by_period"]["2025A"]
+    _selected = fdd_qoe_period_selector.value
+    _selected_hist = fdd_historical_reference[_selected]
+    _cash = fdd_review_data["cash_like_components"]
+    _debt = fdd_review_data["debt_like_components"]
+    _nonop = fdd_review_data["non_operating_asset_components"]
+    _forecast = fdd_review_data.get("forecast_qoe_adjustments", {})
+    _watchlist = fdd_review_data.get("debt_like_watchlist", [])
+
+    def _money(value):
+        return f"{float(value) / 1_000:,.1f}"
+
+    def _signed_money(value):
+        return f"{float(value) / 1_000:+,.1f}"
+
+    def _won(value):
+        return f"{float(value):,.0f}"
+
+    def _pct(value, digits=1):
+        return f"{float(value):.{digits}%}"
+
+    def _year_th(period):
+        cls = "fdd-selected-col" if period == _selected else ""
+        return f'<th class="{cls}">{period}</th>'
+
+    def _year_td(period, value, formatter=_money):
+        cls = "fdd-selected-col" if period == _selected else ""
+        return f'<td class="{cls}">{formatter(value)}</td>'
+
+    _selected_qoe_rate = (
+        float(_selected_hist["qoe_adjustment"])
+        / float(_selected_hist["reported_ebitda"])
+        if float(_selected_hist["reported_ebitda"]) != 0
+        else 0.0
+    )
+
+    # -------------------------
+    # Process map / key outputs
+    # -------------------------
+    _process_map = mo.md(
+        f"""
+        <div class="fdd-process-grid">
+            <div class="fdd-stage fdd-stage-blue">
+                <div class="fdd-stage-step">01 · EARNINGS QUALITY</div>
+                <div class="fdd-stage-title">Quality of Earnings (QoE)</div>
+                <div class="fdd-stage-flow">공시 EBITDA → 지속가능 EBITDA</div>
+                <div class="fdd-stage-value">{_money(_base['fdd_ebitda'])}십억원</div>
+                <div class="fdd-stage-meta">2025A 조정 {_signed_money(_base['fdd_ebitda'] - _base['reported_ebitda'])}십억원</div>
+            </div>
+            <div class="fdd-stage fdd-stage-blue">
+                <div class="fdd-stage-step">02 · WORKING CAPITAL</div>
+                <div class="fdd-stage-title">Net Working Capital (NWC)</div>
+                <div class="fdd-stage-flow">기말 NWC ↔ 정상 NWC Peg</div>
+                <div class="fdd-stage-value">{_money(_base['normalized_nwc_peg'])}십억원</div>
+                <div class="fdd-stage-meta">Diagnostic gap {_signed_money(_base['nwc_gap'])}십억원</div>
+            </div>
+            <div class="fdd-stage fdd-stage-gold">
+                <div class="fdd-stage-step">03 · PRICE ADJUSTMENT</div>
+                <div class="fdd-stage-title">Purchase Price Adjustment (PPA)</div>
+                <div class="fdd-stage-flow">NWC gap → 거래가격 적용</div>
+                <div class="fdd-stage-value">{_money(_base['applied_nwc_adjustment'])}십억원</div>
+                <div class="fdd-stage-meta">Base Case 적용률 0%</div>
+            </div>
+            <div class="fdd-stage fdd-stage-teal">
+                <div class="fdd-stage-step">04 · NET DEBT / OTHER ASSETS</div>
+                <div class="fdd-stage-title">Net Debt · 비영업자산</div>
+                <div class="fdd-stage-flow">Cash-like − Debt-like + 비영업자산</div>
+                <div class="fdd-stage-value">{_money(_base['net_cash'])}십억원</div>
+                <div class="fdd-stage-meta">비영업자산 {_money(_base['non_operating_assets'])}십억원</div>
+            </div>
+            <div class="fdd-stage fdd-stage-navy">
+                <div class="fdd-stage-step">05 · EQUITY BRIDGE</div>
+                <div class="fdd-stage-title">FDD 조정 지분가치</div>
+                <div class="fdd-stage-flow">DCF EV → Equity Value</div>
+                <div class="fdd-stage-value">{_base['equity_value'] / 1_000_000:,.2f}조원</div>
+                <div class="fdd-stage-meta">{_won(_base['value_per_share'])}원/주</div>
+            </div>
+        </div>
+        """
+    )
+
+    # -------------------------
+    # QoE matrix
+    # -------------------------
+    _qoe_header = "".join(_year_th(period) for period in ("2023A", "2024A", "2025A"))
+    _qoe_rows = []
+    _qoe_specs = (
+        ("공시 EBITDA", "reported_ebitda", _money),
+        ("QoE 조정", "qoe_adjustment", _signed_money),
+        ("FDD 조정 EBITDA", "fdd_ebitda", _money),
+        ("FDD 조정 EBITDA 이익률", "fdd_margin", lambda v: _pct(v, 1)),
+    )
+    for label, key, formatter in _qoe_specs:
+        _cells = "".join(
+            _year_td(period, fdd_historical_reference[period][key], formatter)
+            for period in ("2023A", "2024A", "2025A")
+        )
+        _qoe_rows.append(f"<tr><td>{label}</td>{_cells}</tr>")
+
+    _adjustment_rows = "".join(
+        "<tr>"
+        f"<td>{escape(str(row['항목']))}</td>"
+        f"<td>{_signed_money(row['조정액'])}</td>"
+        f"<td>{escape(str(row['상태']))}</td>"
+        "</tr>"
+        for row in _qoe_live["register"]
+    )
+
+    _qoe_panel = mo.md(
+        f"""
+        <div class="fdd-pane fdd-pane-blue">
+            <div class="fdd-pane-head">
+                <div>
+                    <div class="fdd-pane-code">01 / QUALITY OF EARNINGS</div>
+                    <div class="fdd-pane-title">Quality of Earnings (QoE) 및 지속가능 EBITDA</div>
+                </div>
+                <div class="fdd-pane-badge">선택 {_selected}</div>
+            </div>
+            <table class="fdd-matrix">
+                <thead><tr><th>항목</th>{_qoe_header}</tr></thead>
+                <tbody>{''.join(_qoe_rows)}</tbody>
+            </table>
+            <div class="fdd-inline-metric">
+                <span>선택연도 QoE 조정률</span><strong>{_selected_qoe_rate:+.2%}</strong>
+                <span>→</span><span>공시 EBITDA {_money(_selected_hist['reported_ebitda'])}</span>
+                <span>→</span><span>FDD EBITDA {_money(_selected_hist['fdd_ebitda'])}</span>
+            </div>
+            <div class="fdd-subhead">2025A 조정 내역</div>
+            <table class="fdd-matrix fdd-matrix-tight">
+                <thead><tr><th>항목</th><th>조정액</th><th>상태</th></tr></thead>
+                <tbody>{_adjustment_rows}</tbody>
+            </table>
+        </div>
+        """
+    )
+
+    # -------------------------
+    # NWC / PPA matrix
+    # -------------------------
+    _nwc_header = "".join(_year_th(period) for period in ("2023A", "2024A", "2025A"))
+    _nwc_rows = []
+    _nwc_specs = (
+        ("매출액", "revenue", _money),
+        ("영업 NWC", "operating_nwc", _money),
+        ("NWC / 매출액", "nwc_to_revenue", lambda v: _pct(v, 1)),
+    )
+    for label, key, formatter in _nwc_specs:
+        _cells = "".join(
+            _year_td(period, fdd_historical_reference[period][key], formatter)
+            for period in ("2023A", "2024A", "2025A")
+        )
+        _nwc_rows.append(f"<tr><td>{label}</td>{_cells}</tr>")
+
+    _nwc_panel = mo.md(
+        f"""
+        <div class="fdd-pane fdd-pane-blue">
+            <div class="fdd-pane-head">
+                <div>
+                    <div class="fdd-pane-code">02 / WORKING CAPITAL · 03 / PPA</div>
+                    <div class="fdd-pane-title">Net Working Capital (NWC) 및 Purchase Price Adjustment (PPA)</div>
+                </div>
+                <div class="fdd-pane-badge">선택 {_selected}</div>
+            </div>
+            <table class="fdd-matrix">
+                <thead><tr><th>항목</th>{_nwc_header}</tr></thead>
+                <tbody>{''.join(_nwc_rows)}</tbody>
+            </table>
+            <div class="fdd-bridge-line">
+                <div><span>정상 NWC Peg</span><strong>{_money(_base['normalized_nwc_peg'])}</strong></div>
+                <div class="fdd-bridge-arrow">→</div>
+                <div><span>기말 NWC</span><strong>{_money(_base['closing_nwc'])}</strong></div>
+                <div class="fdd-bridge-arrow">→</div>
+                <div><span>초과 / 부족</span><strong>{_signed_money(_base['nwc_gap'])}</strong></div>
+                <div class="fdd-bridge-arrow">→</div>
+                <div><span>적용 PPA</span><strong>{_signed_money(_base['applied_nwc_adjustment'])}</strong></div>
+            </div>
+            <div class="fdd-footnote">단위: 십억원 · Base Case에서는 정상 운전자본이 DCF forecast에 이미 반영되어 NWC 가격조정 적용률은 0%입니다.</div>
+        </div>
+        """
+    )
+
+    # -------------------------
+    # Net debt matrix
+    # -------------------------
+    _cash_rows = "".join(
+        f"<tr><td>{escape(str(label))}</td><td>{_signed_money(value)}</td></tr>"
+        for label, value in _cash.items()
+        if abs(float(value)) > 1e-9
+    )
+    _debt_rows = "".join(
+        f"<tr><td>{escape(str(label))}</td><td>{_signed_money(value)}</td></tr>"
+        for label, value in _debt.items()
+        if abs(float(value)) > 1e-9
+    )
+    _watch_rows = []
+    for row in _watchlist:
+        _amt = row.get("공시_입력금액")
+        _rate = row.get("인정률")
+        _watch_rows.append(
+            "<tr>"
+            f"<td>{escape(str(row.get('항목', '')))}</td>"
+            f"<td>{'미제공' if _amt is None else _money(_amt)}</td>"
+            f"<td>{'미정' if _rate is None else _pct(_rate, 0)}</td>"
+            "</tr>"
+        )
+    _watch_rows_html = "".join(_watch_rows) or '<tr><td colspan="3">추가 공개 metadata 없음</td></tr>'
+
+    _net_debt_panel = mo.md(
+        f"""
+        <div class="fdd-pane fdd-pane-teal">
+            <div class="fdd-pane-head">
+                <div>
+                    <div class="fdd-pane-code">04 / NET DEBT</div>
+                    <div class="fdd-pane-title">Cash-like / Debt-like 및 Net Debt 검토</div>
+                </div>
+                <div class="fdd-pane-badge fdd-pane-badge-teal">순현금 {_money(_base['net_cash'])}</div>
+            </div>
+            <div class="fdd-split-table">
+                <div>
+                    <div class="fdd-subhead">Cash-like</div>
+                    <table class="fdd-matrix fdd-matrix-tight"><tbody>{_cash_rows}<tr class="fdd-total-row"><td>Cash-like 합계</td><td>{_money(_base['cash_like'])}</td></tr></tbody></table>
+                </div>
+                <div>
+                    <div class="fdd-subhead">Debt-like</div>
+                    <table class="fdd-matrix fdd-matrix-tight"><tbody>{_debt_rows}<tr class="fdd-total-row"><td>Debt-like 합계</td><td>{_money(_base['debt_like'])}</td></tr></tbody></table>
+                </div>
+            </div>
+            <div class="fdd-subhead">Open item / 추가 실사</div>
+            <table class="fdd-matrix fdd-matrix-tight">
+                <thead><tr><th>항목</th><th>공시·입력금액</th><th>인정률</th></tr></thead>
+                <tbody>{_watch_rows_html}</tbody>
+            </table>
+        </div>
+        """
+    )
+
+    # -------------------------
+    # Non-operating assets
+    # -------------------------
+    _nonop_rows = "".join(
+        f"<tr><td>{escape(str(label))}</td><td>{_money(value)}</td><td>{float(value) / _base['non_operating_assets']:.1%}</td></tr>"
+        for label, value in _nonop.items()
+        if abs(float(value)) > 1e-9
+    )
+    _nonop_panel = mo.md(
+        f"""
+        <div class="fdd-pane fdd-pane-teal">
+            <div class="fdd-pane-head">
+                <div>
+                    <div class="fdd-pane-code">04 / NON-OPERATING ASSETS</div>
+                    <div class="fdd-pane-title">비영업자산 및 Equity Value 조정</div>
+                </div>
+                <div class="fdd-pane-badge fdd-pane-badge-teal">합계 {_money(_base['non_operating_assets'])}</div>
+            </div>
+            <table class="fdd-matrix">
+                <thead><tr><th>항목</th><th>인식가치</th><th>비중</th></tr></thead>
+                <tbody>{_nonop_rows}</tbody>
+            </table>
+            <div class="fdd-footnote">리가켐바이오는 현재 공시 시장가치 100%를 Base Case에 반영하며 처분세금·블록딜 할인 등 realization friction은 미반영입니다.</div>
+        </div>
+        """
+    )
+
+    # -------------------------
+    # Equity bridge / valuation
+    # -------------------------
+    _bridge_rows = (
+        ("DCF Enterprise Value", _base["enterprise_value"], "EV"),
+        ("+ 순현금", _base["net_cash"], "Net Cash"),
+        ("+ 비영업자산", _base["non_operating_assets"], "Non-operating"),
+        ("- 비지배지분", -_base["nci"], "NCI"),
+        ("+ 적용 NWC PPA", _base["applied_nwc_adjustment"], "PPA"),
+        ("= FDD 지분가치", _base["equity_value"], "Equity"),
+    )
+    _bridge_rows_html = "".join(
+        f"<tr><td>{label}</td><td>{_signed_money(value) if label[0] in '+-' else _money(value)}</td><td>{note}</td></tr>"
+        for label, value, note in _bridge_rows
+    )
+    _bridge_panel = mo.md(
+        f"""
+        <div class="fdd-pane fdd-pane-navy">
+            <div class="fdd-pane-head">
+                <div>
+                    <div class="fdd-pane-code">05 / EQUITY BRIDGE</div>
+                    <div class="fdd-pane-title">FDD 조정 지분가치 Bridge</div>
+                </div>
+                <div class="fdd-pane-badge fdd-pane-badge-navy">{_won(_base['value_per_share'])}원/주</div>
+            </div>
+            <table class="fdd-matrix">
+                <thead><tr><th>항목</th><th>금액</th><th>분류</th></tr></thead>
+                <tbody>{_bridge_rows_html}</tbody>
+            </table>
+            <div class="fdd-equity-output">
+                <div><span>FDD 지분가치</span><strong>{_base['equity_value'] / 1_000_000:,.2f}조원</strong></div>
+                <div><span>주당 FDD 가치</span><strong>{_won(_base['value_per_share'])}원</strong></div>
+                <div><span>FDD 지분가치 조정액</span><strong>{_signed_money(_base['fdd_equity_adjustment'])}십억원</strong></div>
+            </div>
+        </div>
+        """
+    )
+
+    # -------------------------
+    # Forecast normalization
+    # -------------------------
+    _forecast_years = sorted(
+        set(_forecast.get("ebit", {}).keys())
+        | set(_forecast.get("da", {}).keys())
+        | set(_forecast.get("lease_capex", {}).keys())
+        | set(_forecast.get("lease_capex_ratio", {}).keys())
+    )
+    if _forecast_years:
+        _forecast_rows = "".join(
+            "<tr>"
+            f"<td>{int(year)}E</td>"
+            f"<td>{_signed_money(_forecast.get('ebit', {}).get(year, 0.0))}</td>"
+            f"<td>{_signed_money(_forecast.get('da', {}).get(year, 0.0))}</td>"
+            f"<td>{_money(_forecast.get('lease_capex', {}).get(year, 0.0))}</td>"
+            f"<td>{_pct(_forecast.get('lease_capex_ratio', {}).get(year, 0.0), 1)}</td>"
+            "</tr>"
+            for year in _forecast_years
+        )
+    else:
+        _forecast_rows = '<tr><td colspan="5">Forecast normalization metadata 없음</td></tr>'
+
+    _forecast_panel = mo.md(
+        f"""
+        <div class="fdd-pane fdd-pane-gold">
+            <div class="fdd-pane-head">
+                <div>
+                    <div class="fdd-pane-code">FORWARD LOOK / NORMALIZATION</div>
+                    <div class="fdd-pane-title">Forecast Normalization 참고</div>
+                </div>
+            </div>
+            <table class="fdd-matrix fdd-matrix-tight">
+                <thead><tr><th>연도</th><th>EBIT 조정</th><th>D&amp;A 조정</th><th>Lease capex</th><th>매출액 대비</th></tr></thead>
+                <tbody>{_forecast_rows}</tbody>
+            </table>
+        </div>
+        """
+    )
+
+    # -------------------------
+    # Scenario overlay controls
+    # -------------------------
+    _overlay_result = mo.md(
+        f"""
+        <div class="fdd-overlay-result">
+            <div><span>Overlay Equity Value</span><strong>{fdd_overlay_snapshot['equity_value'] / 1_000_000:,.2f}조원</strong></div>
+            <div><span>Overlay Value / Share</span><strong>{_won(fdd_overlay_snapshot['value_per_share'])}원</strong></div>
+            <div><span>Base 대비 차이</span><strong>{_signed_money(fdd_overlay_snapshot['difference_vs_base'])}십억원</strong></div>
+        </div>
+        """
+    )
+    _control_bar = mo.hstack(
+        [
+            fdd_qoe_period_selector,
+            fdd_ligachem_recognition,
+            fdd_short_term_recognition,
+            fdd_nwc_recognition,
+        ],
+        widths=[0.16, 0.28, 0.28, 0.28],
+        gap=0.7,
+        align="start",
+        wrap=True,
+    )
+    _controls_panel = mo.vstack(
+        [
+            mo.md(
+                """
+                <div class="fdd-control-head">
+                    <div><strong>FDD WORKBENCH</strong> · 분석연도와 거래가격 overlay를 한 곳에서 조정</div>
+                    <div class="fdd-control-hint">2023A–2025A historical reference · Overlay는 Base model 비파괴</div>
+                </div>
+                """
+            ),
+            _control_bar,
+            _overlay_result,
+        ],
+        gap=0.35,
+    ).style(
+        {
+            "background": "#F8FAFC",
+            "border": "1px solid #CBD5E1",
+            "border-radius": "8px",
+            "padding": "8px 10px 9px",
+        }
+    )
+
+    # -------------------------
+    # Multi-pane workbench
+    # -------------------------
+    _row_one = mo.hstack(
+        [_qoe_panel, _nwc_panel, _net_debt_panel],
+        widths=[0.34, 0.31, 0.35],
+        gap=0.65,
+        align="stretch",
+        wrap=True,
+    )
+    _row_two = mo.hstack(
+        [_nonop_panel, _bridge_panel, _forecast_panel],
+        widths=[0.30, 0.38, 0.32],
+        gap=0.65,
+        align="stretch",
+        wrap=True,
+    )
+
+    fdd_workbench_view = mo.vstack(
+        [_process_map, _controls_panel, _row_one, _row_two],
+        gap=0.55,
+    )
+    return (fdd_workbench_view,)
+
+
+# FDD-05 · compact institutional-style Page 5 shell
+@app.cell
+def _(dashboard_css, fdd_workbench_view, mo):
+    _fdd_css = mo.md(
+        """
+        <style>
+            .fdd-workspace * { box-sizing: border-box; }
+            .fdd-workspace { font-variant-numeric: tabular-nums; }
+
+            .fdd-process-grid {
+                display: grid;
+                grid-template-columns: repeat(5, minmax(0, 1fr));
+                gap: 6px;
+                margin: 2px 0 0;
+            }
+            .fdd-stage {
+                min-width: 0;
+                background: #FFFFFF;
+                border: 1px solid #D9E2EC;
+                border-top-width: 3px;
+                border-radius: 7px;
+                padding: 8px 9px 7px;
+            }
+            .fdd-stage-blue { border-top-color: #1F5A94; }
+            .fdd-stage-teal { border-top-color: #247B7B; }
+            .fdd-stage-gold { border-top-color: #C18A2D; }
+            .fdd-stage-navy { border-top-color: #102A43; background: #F7FAFC; }
+            .fdd-stage-step {
+                color: #64748B;
+                font-size: 10px;
+                font-weight: 800;
+                letter-spacing: 0.06em;
+                white-space: nowrap;
+            }
+            .fdd-stage-title {
+                color: #102A43;
+                font-size: 13px;
+                font-weight: 800;
+                line-height: 1.25;
+                margin-top: 3px;
+            }
+            .fdd-stage-flow {
+                color: #64748B;
+                font-size: 10.5px;
+                line-height: 1.25;
+                margin-top: 2px;
+                min-height: 22px;
+            }
+            .fdd-stage-value {
+                color: #102A43;
+                font-size: 19px;
+                font-weight: 850;
+                line-height: 1.15;
+                margin-top: 5px;
+                white-space: nowrap;
+            }
+            .fdd-stage-meta {
+                color: #64748B;
+                font-size: 10.5px;
+                margin-top: 3px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .fdd-pane {
+                width: 100%;
+                height: 100%;
+                background: #FFFFFF;
+                border: 1px solid #D9E2EC;
+                border-top-width: 3px;
+                border-radius: 7px;
+                padding: 8px 9px 9px;
+                overflow: hidden;
+            }
+            .fdd-pane-blue { border-top-color: #1F5A94; }
+            .fdd-pane-teal { border-top-color: #247B7B; }
+            .fdd-pane-gold { border-top-color: #C18A2D; }
+            .fdd-pane-navy { border-top-color: #102A43; }
+            .fdd-pane-head {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 8px;
+                padding-bottom: 6px;
+                margin-bottom: 5px;
+                border-bottom: 1px solid #E9EEF3;
+            }
+            .fdd-pane-code {
+                color: #64748B;
+                font-size: 10px;
+                font-weight: 800;
+                letter-spacing: 0.06em;
+            }
+            .fdd-pane-title {
+                color: #102A43;
+                font-size: 13.5px;
+                font-weight: 820;
+                line-height: 1.25;
+                margin-top: 2px;
+            }
+            .fdd-pane-badge {
+                flex: 0 0 auto;
+                border: 1px solid #C9DCEB;
+                border-radius: 999px;
+                background: #EAF2F8;
+                color: #1F5A94;
+                padding: 3px 6px;
+                font-size: 10px;
+                font-weight: 800;
+                white-space: nowrap;
+            }
+            .fdd-pane-badge-teal { background: #EDF7F6; color: #176B63; border-color: #ABDCD5; }
+            .fdd-pane-badge-navy { background: #102A43; color: #FFFFFF; border-color: #102A43; }
+
+            .fdd-matrix {
+                width: 100%;
+                border-collapse: collapse;
+                table-layout: fixed;
+                color: #243B53;
+                font-size: 11px;
+                line-height: 1.18;
+            }
+            .fdd-matrix th,
+            .fdd-matrix td {
+                padding: 4px 5px;
+                border-bottom: 1px solid #EDF2F7;
+                text-align: right;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .fdd-matrix th {
+                color: #52667A;
+                font-size: 10.2px;
+                font-weight: 800;
+                background: #F8FAFC;
+            }
+            .fdd-matrix th:first-child,
+            .fdd-matrix td:first-child {
+                text-align: left;
+                width: 41%;
+            }
+            .fdd-matrix-tight th,
+            .fdd-matrix-tight td { padding-top: 3px; padding-bottom: 3px; }
+            .fdd-selected-col {
+                background: #EEF7F6 !important;
+                color: #102A43;
+                font-weight: 800;
+            }
+            .fdd-total-row td {
+                border-top: 1px solid #94A3B8;
+                font-weight: 850;
+                color: #102A43;
+            }
+            .fdd-subhead {
+                margin: 6px 0 3px;
+                color: #52667A;
+                font-size: 10.2px;
+                font-weight: 850;
+                letter-spacing: 0.04em;
+                text-transform: uppercase;
+            }
+            .fdd-inline-metric {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                flex-wrap: wrap;
+                padding: 5px 6px;
+                margin-top: 5px;
+                background: #F8FAFC;
+                border: 1px solid #E2E8F0;
+                border-radius: 5px;
+                color: #64748B;
+                font-size: 10.5px;
+            }
+            .fdd-inline-metric strong { color: #102A43; font-size: 13px; }
+            .fdd-bridge-line {
+                display: grid;
+                grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+                align-items: center;
+                gap: 4px;
+                margin-top: 7px;
+            }
+            .fdd-bridge-line > div:not(.fdd-bridge-arrow) {
+                min-width: 0;
+                padding: 5px 5px;
+                border: 1px solid #E2E8F0;
+                background: #F8FAFC;
+                border-radius: 5px;
+                text-align: right;
+            }
+            .fdd-bridge-line span { display: block; color: #64748B; font-size: 9.5px; }
+            .fdd-bridge-line strong { display: block; color: #102A43; font-size: 12.5px; margin-top: 2px; }
+            .fdd-bridge-arrow { color: #94A3B8; font-weight: 900; }
+            .fdd-split-table {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 7px;
+            }
+            .fdd-footnote {
+                color: #64748B;
+                font-size: 10px;
+                line-height: 1.3;
+                margin-top: 5px;
+            }
+            .fdd-equity-output,
+            .fdd-overlay-result {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 6px;
+                margin-top: 6px;
+            }
+            .fdd-equity-output > div,
+            .fdd-overlay-result > div {
+                min-width: 0;
+                border: 1px solid #E2E8F0;
+                border-radius: 5px;
+                background: #F8FAFC;
+                padding: 5px 6px;
+            }
+            .fdd-equity-output span,
+            .fdd-overlay-result span { display: block; color: #64748B; font-size: 9.5px; }
+            .fdd-equity-output strong,
+            .fdd-overlay-result strong { display: block; color: #102A43; font-size: 13px; margin-top: 2px; }
+            .fdd-control-head {
+                display: flex;
+                justify-content: space-between;
+                gap: 12px;
+                align-items: baseline;
+                color: #334E68;
+                font-size: 11px;
+                margin-bottom: 1px;
+            }
+            .fdd-control-head strong { color: #102A43; letter-spacing: 0.04em; }
+            .fdd-control-hint { color: #64748B; font-size: 10px; }
+
+            /* Reduce Marimo control chrome only inside Page 5. */
+            .fdd-workspace label { font-size: 10.5px !important; }
+            .fdd-workspace input,
+            .fdd-workspace select { font-size: 10.5px !important; }
+
+            @media (max-width: 1180px) {
+                .fdd-process-grid { grid-template-columns: repeat(3, 1fr); }
+                .fdd-stage-flow { min-height: auto; }
+            }
+            @media (max-width: 820px) {
+                .fdd-process-grid { grid-template-columns: 1fr; }
+                .fdd-bridge-line { grid-template-columns: 1fr; }
+                .fdd-bridge-arrow { display: none; }
+                .fdd-split-table { grid-template-columns: 1fr; }
+            }
+        </style>
+        """
+    )
+
+    fdd_review_page = mo.vstack(
+        [
+            dashboard_css,
+            _fdd_css,
+            mo.md(
+                """
+                <div class="chapter-intro" style="padding-top: 8px; padding-bottom: 8px; margin-bottom: 2px;">
+                    <div class="chapter-kicker">FINANCIAL DUE DILIGENCE (FDD) · DEAL WORKBENCH</div>
+                    <div class="chapter-title" style="font-size: 21px;">Financial Due Diligence (FDD) 및 거래가격 검토</div>
+                    <div class="chapter-copy" style="margin-top: 3px;">
+                        수익의 질 → 정상 운전자본 → Purchase Price Adjustment → Net Debt·비영업자산 → Equity Value의 순서로
+                        거래가격 조정 구조를 한 화면에서 추적합니다.
+                    </div>
+                </div>
+                """
+            ),
+            fdd_workbench_view,
+        ],
+        gap=0.45,
+    ).style({"width": "100%"})
+    return (fdd_review_page,)
+
+
 @app.cell
 def _(
     dashboard_css,
     executive_top,
     fcff_waterfall_row,
+    fdd_review_page,
     formula_explorer_section,
     market_calibration_body,
     mo,
@@ -3539,6 +4545,12 @@ def _(
             mo.md(
                 """
                 <div class="chapter-intro">
+                    <div class="chapter-kicker">시나리오 분석</div>
+                    <div class="chapter-title">시나리오 및 주요 가정 검토</div>
+                    <div class="chapter-copy">
+                        기준 시나리오와 독립 가치평가 범위를 비교해 주요 가정의 위험을
+                        식별합니다. WACC·영구성장률·매출 CAGR·EBIT Margin 변화가
+                        주당 내재가치와 가치평가 범위에 미치는 영향을 분석합니다.
                     <div class="chapter-kicker">SCENARIO ANALYSIS</div>
                     <div class="chapter-title">Scenario &amp; Assumption Review</div>
                     <div class="chapter-copy">
@@ -3584,12 +4596,17 @@ def _(
                 calculation_structure_page,
                 show_loading_indicator=True,
             ),
+            "3. 시나리오 및 주요 가정 검토": mo.lazy(
             "3. Scenario & Assumption Review": mo.lazy(
                 sensitivity_analysis_page,
                 show_loading_indicator=True,
             ),
             "4. 시장가치 검증": mo.lazy(
                 market_calibration_page,
+                show_loading_indicator=True,
+            ),
+            "5. FDD 및 거래가격 검토": mo.lazy(
+                fdd_review_page,
                 show_loading_indicator=True,
             ),
         }
