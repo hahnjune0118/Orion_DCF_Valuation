@@ -1,3 +1,12 @@
+# /// script
+# requires-python = ">=3.12,<3.13"
+# dependencies = [
+#     "marimo==0.23.16",
+#     "openpyxl==3.1.5",
+#     "pandas==3.0.4",
+#     "plotly==6.8.0",
+# ]
+# ///
 import marimo
 
 __generated_with = "0.23.16"
@@ -6,13 +15,52 @@ app = marimo.App(width="full")
 
 @app.cell
 def _():
+    import sys
+    from html import escape
+    from pathlib import Path
+    from tempfile import gettempdir
+    from urllib.request import urlretrieve
+
+    # Molab mirrors the notebook file, not the full repository.  On a fresh
+    # cloud runtime, hydrate the dashboard's sibling Python modules from the
+    # same GitHub source of truth before importing the model.
+    _runtime_modules = (
+        "dashboard_components.py",
+        "orion_dcf.py",
+        "market_calibration.py",
+        "cash_flow_model.py",
+        "equity_bridge.py",
+        "fcff_model.py",
+        "fdd_model.py",
+        "forecast_model.py",
+        "valuation_model.py",
+    )
+    _project_root = Path.cwd()
+    _has_local_runtime = all(
+        (_project_root / _module_name).is_file()
+        for _module_name in _runtime_modules
+    )
+
+    if not _has_local_runtime:
+        _runtime_root = Path(gettempdir()) / "orion_valuation_runtime"
+        _runtime_root.mkdir(parents=True, exist_ok=True)
+        _raw_base = (
+            "https://raw.githubusercontent.com/"
+            "hahnjune0118/Orion_DCF_Valuation/main/"
+        )
+        for _module_name in _runtime_modules:
+            urlretrieve(
+                _raw_base + _module_name,
+                _runtime_root / _module_name,
+            )
+        if str(_runtime_root) not in sys.path:
+            sys.path.insert(0, str(_runtime_root))
+
     import marimo as mo
     import pandas as pd
     import plotly.express as px
     import plotly.graph_objects as go
 
-    from html import escape
-    from pathlib import Path
     from dashboard_components import (
         build_auditor_range_conclusion,
         build_fcff_waterfall_figure,
