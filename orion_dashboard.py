@@ -846,8 +846,8 @@ def _(mo):
                 border: 1px solid #CBD5E1;
                 border-top: 3px solid {COLORS["blue"]};
                 border-radius: 10px;
-                padding: 15px 16px;
-                min-height: 116px;
+                padding: 10px 14px;
+                min-height: 82px;
                 box-shadow: 0 2px 8px rgba(16, 42, 67, 0.05);
             }}
 
@@ -868,9 +868,9 @@ def _(mo):
 
             .market-card-note {{
                 color: #475569;
-                font-size: 14px;
-                line-height: 1.55;
-                margin-top: 7px;
+                font-size: 12px;
+                line-height: 1.4;
+                margin-top: 4px;
             }}
 
             .market-section {{
@@ -2962,25 +2962,10 @@ def _(
 
 
 @app.cell
-def _(mo):
-    reverse_margin = mo.ui.slider(
-        start=12.0,
-        stop=22.0,
-        step=0.1,
-        value=16.2,
-        label="2030 정상 영업이익률 (%)",
-        include_input=True,
-        full_width=True,
-    )
-    reverse_asset_realization = mo.ui.slider(
-        start=0,
-        stop=100,
-        step=5,
-        value=0,
-        label="비영업자산 가치인식률 (%)",
-        include_input=True,
-        full_width=True,
-    )
+def _():
+    # 화면 밀도를 높이기 위해 Reverse DCF는 기준가정을 고정합니다.
+    reverse_margin = 16.2
+    reverse_asset_realization = 0.0
     return reverse_asset_realization, reverse_margin
 
 
@@ -2992,8 +2977,8 @@ def _(
     reverse_margin,
     solve_reverse_dcf_growth,
 ):
-    _selected_margin = float(reverse_margin.value) / 100
-    _selected_realization = float(reverse_asset_realization.value) / 100
+    _selected_margin = float(reverse_margin) / 100
+    _selected_realization = float(reverse_asset_realization) / 100
     reverse_result = solve_reverse_dcf_growth(
         model,
         current_price,
@@ -3232,7 +3217,7 @@ def _(
         )
     )
     football_field_fig.update_xaxes(title="내재 주당가치 (천원/주)")
-    football_field_fig = apply_chart_style(football_field_fig, height=450)
+    football_field_fig = apply_chart_style(football_field_fig, height=300)
     football_field_fig.update_layout(title_font=dict(size=20))
     football_field_fig.update_xaxes(
         tickfont=dict(size=13),
@@ -3314,10 +3299,7 @@ def _(
     mo,
     model,
     peer_multiples_fig,
-    reverse_asset_realization,
-    reverse_margin,
     reverse_result,
-    reverse_tradeoff_fig,
 ):
     _wacc = model["WACC"]["구성요소"]
     _calibration_cards = mo.md(
@@ -3372,21 +3354,6 @@ def _(
         </div>
         """
     )
-    _reverse_controls = mo.vstack(
-        [
-            mo.md(
-                """
-                <div class="fcff-panel-title">Reverse DCF 입력 가정</div>
-                <div class="fcff-panel-caption">
-                    정상 영업이익률과 비영업자산 가치인식률을 조정합니다.
-                </div>
-                """
-            ),
-            reverse_margin,
-            reverse_asset_realization,
-        ],
-        gap=0.5,
-    )
     _reverse_concept = mo.md(
         """
         <div class="reverse-concept">
@@ -3413,17 +3380,23 @@ def _(
                 """
             ),
             _calibration_cards,
-            mo.md(
-                """
-                <div class="market-section">
-                    <div class="market-section-title">Trading Comps</div>
-                    <div class="market-section-copy">
-                        국내외 식품기업의 FY2026E EV/EBITDA, EV/EBIT, P/E를 같은 축에서 비교합니다.
-                    </div>
-                </div>
-                """
+            mo.accordion(
+                {
+                    "상세 비교기업": mo.vstack(
+                        [
+                            mo.md(
+                                """
+                                국내외 식품기업과 오리온의 FY2026E
+                                EV/EBITDA·EV/EBIT·P/E를 비교합니다.
+                                """
+                            ),
+                            mo.ui.plotly(peer_multiples_fig),
+                        ],
+                        gap=0.35,
+                    )
+                },
+                lazy=True,
             ),
-            mo.ui.plotly(peer_multiples_fig),
             mo.md(
                 """
                 <div class="market-section">
@@ -3436,14 +3409,7 @@ def _(
             ),
             mo.ui.plotly(football_field_fig),
             _reverse_concept,
-            mo.hstack(
-                [_reverse_controls, _reverse_summary],
-                widths=[0.28, 0.72],
-                gap=1,
-                align="stretch",
-                wrap=True,
-            ),
-            mo.ui.plotly(reverse_tradeoff_fig),
+            _reverse_summary,
             mo.md(
                 """
                 <div class="market-section">
