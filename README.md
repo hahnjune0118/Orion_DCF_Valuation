@@ -4,7 +4,7 @@
 
 Excel 기준모형을 Python으로 재계산하고, Marimo에서 **영업가치 산정 → 시장가치 교차검증 → Quality of Earnings → Net Working Capital → Net Debt·비영업자산 → FDD-adjusted Equity Value**까지 하나의 분석 흐름으로 연결했습니다.
 
-[▶ Live App — Orion Valuation & FDD Workbench](https://molab.marimo.io/notebooks/nb_wHWFGjT6UJBMiHCRvmEepT/app)
+[▶ Live App — Orion Valuation & FDD Workbench](https://molab.marimo.io/notebooks/nb_qRDYP1JABBx1UYjTPS5kw5/app)
 
 > 평가기준일: 2025년 12월 31일  
 > Current Share Price 기준일: 2026년 8월 21일  
