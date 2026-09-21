@@ -15,6 +15,9 @@ app = marimo.App(width="full")
 
 @app.cell
 def _():
+    from html import escape
+    from pathlib import Path
+
     import marimo as mo
     import pandas as pd
     import plotly.express as px
@@ -78,6 +81,9 @@ def _():
 
 @app.cell
 def _(Path, load_market_calibration_data, pd, run_orion_dcf):
+    import tempfile as _tempfile
+    import urllib.request as _urllib_request
+
     project_root = Path.cwd()
 
     excel_path = (
@@ -89,12 +95,9 @@ def _(Path, load_market_calibration_data, pd, run_orion_dcf):
 
     # 클라우드 실행 시 GitHub에서 Excel 원본을 내려받습니다.
     if not excel_path.exists():
-        from tempfile import gettempdir
-        from urllib.request import urlretrieve
+        cloud_excel_path = Path(_tempfile.gettempdir()) / "orion_dcf.xlsx"
 
-        cloud_excel_path = Path(gettempdir()) / "orion_dcf.xlsx"
-
-        urlretrieve(
+        _urllib_request.urlretrieve(
             "https://raw.githubusercontent.com/"
             "hahnjune0118/Orion_DCF_Valuation/"
             "main/data/raw/orion_dcf.xlsx",
@@ -109,11 +112,8 @@ def _(Path, load_market_calibration_data, pd, run_orion_dcf):
         project_root / "data" / "metadata" / "market_calibration.csv"
     )
     if not market_calibration_path.exists():
-        from tempfile import gettempdir
-        from urllib.request import urlretrieve
-
-        cloud_market_path = Path(gettempdir()) / "market_calibration.csv"
-        urlretrieve(
+        cloud_market_path = Path(_tempfile.gettempdir()) / "market_calibration.csv"
+        _urllib_request.urlretrieve(
             "https://raw.githubusercontent.com/"
             "hahnjune0118/Orion_DCF_Valuation/"
             "main/data/metadata/market_calibration.csv",
